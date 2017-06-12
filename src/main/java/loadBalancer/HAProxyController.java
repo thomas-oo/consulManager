@@ -1,25 +1,20 @@
 package loadBalancer;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import util.BaseController;
 
-public class HAProxyController {
+import java.io.File;
+
+public class HAProxyController extends BaseController{
 
     private String executablePath;
-    private String configuration;
-    private int listeningPort;
     private String confFilePath;
-    private String shell = "bash -c";
 
-    public HAProxyController(String executablePath, int listeningPort, String confFilePath) {
+    public HAProxyController(String executablePath, String confFilePath) {
         this.executablePath = executablePath;
-        this.listeningPort = listeningPort;
         this.confFilePath = confFilePath;
     }
 
-    public void startHAProxy() throws Exception {
+    public void startProcess() throws Exception {
         // Check for configuration file
         File conf;
         conf = new File(confFilePath);
@@ -31,31 +26,16 @@ public class HAProxyController {
         // Start haproxy
         try {
             String command = executablePath + " -f " + confFilePath;
-            Process p = execInShell(command);
+            this.p = execInShell(command);
             System.out.println("Started HAProxy");
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    public void stopHAProxy() throws Exception {
-        // Kill haproxy process
-        String findPid = "pidof haproxy";
-        Process process = execInShell(findPid);
-        BufferedReader output = new BufferedReader(new InputStreamReader(process.getInputStream()));
-        String out = "";
-        String pid = "";
-        while((out = output.readLine()) != null){
-            pid+=out;
-        }
-        String killHaproxy = "kill -9 "+pid;
-        execInShell(killHaproxy);
-        System.out.println("stopped HAProxy");
-    }
-
-    private Process execInShell(String command) throws IOException {
+    @Override
+    public void stopProcess() throws Exception {
         Runtime r = Runtime.getRuntime();
-        Process p = r.exec(new String[] {"bash", "-c", command});
-        return p;
+        r.exec("pkill haproxy");
     }
 }

@@ -1,11 +1,11 @@
 package consul;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import util.BaseController;
 
-public class ConsulTemplateController{
+import java.io.File;
+
+
+public class ConsulTemplateController extends BaseController{
     String executablePath;
     String consulAddressAndPort;
     String confFilePath;
@@ -16,7 +16,7 @@ public class ConsulTemplateController{
         this.confFilePath = confFilePath;
     }
 
-    public void startConsulTemplate() throws Exception {
+    public void startProcess() throws Exception {
         File conf;
         conf = new File(confFilePath);
         if (!conf.exists()) {
@@ -27,33 +27,15 @@ public class ConsulTemplateController{
         // Start consul-template
         try {
             String command = executablePath + " -consul-addr=" + consulAddressAndPort + " -config=" + confFilePath;
-            Process p = execInShell(command);
+            this.p = execInShell(command);
             System.out.println("Started consul-template");
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
-
-    public void stopConsulTemplate() throws Exception{
-        // Kill haproxy process
-        String findPid = "pidof consul-template";
-        Process process = execInShell(findPid);
-        BufferedReader output = new BufferedReader(new InputStreamReader(process.getInputStream()));
-        String out = "";
-        String pid = "";
-        while((out = output.readLine()) != null){
-            pid+=out;
-        }
-        String killConsulTemplate = "kill -9 "+pid;
-        execInShell(killConsulTemplate);
-        System.out.println("stopped consul-template");
-
-    }
-
-    private Process execInShell(String command) throws IOException {
+    @Override
+    public void stopProcess() throws Exception {
         Runtime r = Runtime.getRuntime();
-        Process p = r.exec(new String[] {"bash", "-c", command});
-        return p;
+        r.exec("pkill consul-template");
     }
-
 }

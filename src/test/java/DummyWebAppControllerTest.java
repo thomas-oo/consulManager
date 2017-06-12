@@ -17,16 +17,16 @@ public class DummyWebAppControllerTest {
 
     @After
     public void tearDown() throws Exception {
-        dummyWebAppController.stopWebApp();
+        dummyWebAppController.stopProcess();
     }
 
     @Test
     public void startWebAppTest() throws Exception {
-        dummyWebAppController.startWebApp();
+        dummyWebAppController.startProcess();
         assertTrue(confirmWebAppIsRunning(dummyWebAppController));
     }
 
     private boolean confirmWebAppIsRunning(DummyWebAppController dummyWebAppController) {
-        return (dummyWebAppController.pid != -1);
+        return (dummyWebAppController.getProcess().isAlive());
     }
 }

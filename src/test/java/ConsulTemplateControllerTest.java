@@ -3,9 +3,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-
 import static org.junit.Assert.assertTrue;
 
 public class ConsulTemplateControllerTest {
@@ -21,31 +18,16 @@ public class ConsulTemplateControllerTest {
 
     @After
     public void tearDown() throws Exception {
-        consulTemplateController.stopConsulTemplate();
+        consulTemplateController.stopProcess();
     }
 
     @Test
     public void startConsulTemplateTest() throws Exception {
-        consulTemplateController.startConsulTemplate();
+        consulTemplateController.startProcess();
         assertTrue(confirmConsulTemplateIsRunning());
     }
 
     public boolean confirmConsulTemplateIsRunning() throws Exception {
-        String findPid = "pidof consul-template";
-        Runtime runtime = Runtime.getRuntime();
-        Process process = runtime.exec(findPid);
-        BufferedReader output = new BufferedReader(new InputStreamReader(process.getInputStream()));
-        String out = "";
-        String pid = "";
-        while((out = output.readLine()) != null){
-            pid+=out;
-        }
-        if(pid.equals("")){
-            System.out.println("consul-template is not running");
-            return false;
-        }else{
-            System.out.println("consul-template is running, pid: "+ pid);
-            return true;
-        }
+        return consulTemplateController.getProcess().isAlive();
     }
 }

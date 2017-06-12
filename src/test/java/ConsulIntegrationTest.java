@@ -10,6 +10,9 @@ import org.junit.Before;
 import org.junit.Test;
 import util.DummyWebAppController;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -45,20 +48,39 @@ public class ConsulIntegrationTest {
         //Start up consul, 4 dummy webapps, consulTemplate, and HAProxy
         consulController = new ConsulController(consulPath, consulConfPath);
         consulTemplateController = new ConsulTemplateController(consulTemplatePath, consulTemplateconfFilePath, consulAddressAndPort);
-        haProxyController = new HAProxyController(haproxyPath, haproxyListeningPort, haproxyConfFilePath);
+        haProxyController = new HAProxyController(haproxyPath, haproxyConfFilePath);
         dummyWebAppControllers[0] = new DummyWebAppController(mavenPath, webAppPath, 8080);
         dummyWebAppControllers[1] = new DummyWebAppController(mavenPath, webAppPath, 8081);
         dummyWebAppControllers[2] = new DummyWebAppController(mavenPath, webAppPath, 8082);
         dummyWebAppControllers[3] = new DummyWebAppController(mavenPath, webAppPath, 8083);
 
         //Start
-        consulController.startConsul();
+        consulController.startProcess();
+        consulTemplateController.startProcess();
+        haProxyController.startProcess();
         for(DummyWebAppController dummyWebAppController : dummyWebAppControllers){
-            dummyWebAppController.startWebApp();
+            dummyWebAppController.startProcess();
         }
-        consulTemplateController.startConsulTemplate();
-        haProxyController.startHAProxy();
-        Thread.sleep(10000);
+        waitUntilProcessesStart();
+        //time for new conf file to be written and haproxy to be reloaded
+        Thread.sleep(5000);
+    }
+
+    private void waitUntilProcessesStart() throws Exception {
+        boolean processesStarted = false;
+        while(!processesStarted){
+           processesStarted = true;
+           int[] ports = {8500,8000,8080,8081,8082,8083};
+           for(int port : ports){
+               Runtime r = Runtime.getRuntime();
+               Process p = r.exec("lsof -i :"+port);
+               BufferedReader stdInput = new BufferedReader(new InputStreamReader(p.getInputStream()));
+               if(stdInput.lines().count()==0){
+                   processesStarted = false;
+               }
+           }
+           Thread.sleep(1000);
+        }
     }
 
     //Test that given a request to an end point with headers that select the desired node, that it is redirected to that node
@@ -88,6 +110,7 @@ public class ConsulIntegrationTest {
         //send a second request to see if loadbalancing is working
         httpClient = HttpClientBuilder.create().build();
         response = httpClient.execute(request);
+        assertEquals(200, response.getStatusLine().getStatusCode());
         if(nextIs8082){
             assertTrue("Got header: "+response.getFirstHeader("X-Forwarded-Host").getValue(),response.getFirstHeader("X-Forwarded-Host").getValue().equals("127.0.0.1:8082"));
         }else{
@@ -98,11 +121,11 @@ public class ConsulIntegrationTest {
     @After
     public void tearDown() throws Exception {
         //Stop
-        haProxyController.stopHAProxy();
-        consulTemplateController.stopConsulTemplate();
         for(DummyWebAppController dummyWebAppController : dummyWebAppControllers){
-            dummyWebAppController.stopWebApp();
+            dummyWebAppController.stopProcess();
         }
-        consulController.stopConsul();
+        haProxyController.stopProcess();
+        consulTemplateController.stopProcess();
+        consulController.stopProcess();
     }
 }
