@@ -1,5 +1,6 @@
 import loadBalancer.HAProxyController;
 import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.io.BufferedReader;
@@ -7,23 +8,24 @@ import java.io.InputStreamReader;
 
 import static org.junit.Assert.assertTrue;
 
-/**
- * Created by root on 6/9/17.
- */
 public class HAProxyControllerTest {
     String haproxyPath = "/usr/local/bin/haproxy";
     String confFilePath = "/root/Documents/consulProto/haproxy.conf";
+    int listeningPort = 8000;
+    HAProxyController haProxyController;
+    @Before
+    public void setUp() throws Exception {
+        haProxyController = new HAProxyController(haproxyPath, listeningPort, confFilePath);
+    }
 
     @After
     public void stopHaproxyTest() throws Exception {
-        HAProxyController haProxyController = new HAProxyController(haproxyPath, 8000, confFilePath);
-        haProxyController.stopLoadBalancer();
+        haProxyController.stopHAProxy();
     }
 
     @Test
     public void startHAProxyTest() throws Exception {
-        HAProxyController haProxyController = new HAProxyController(haproxyPath, 8000, confFilePath);
-        haProxyController.startLoadBalancer();
+        haProxyController.startHAProxy();
         assertTrue(confirmHAProxyIsRunning());
     }
 

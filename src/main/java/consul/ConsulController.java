@@ -1,46 +1,43 @@
-package loadBalancer;
+package consul;
 
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 
-public class HAProxyController {
+/**
+ * Created by root on 6/9/17.
+ */
+//This is a controller for consul but in DEV MODE. This is only for prototyping
+public class ConsulController {
+    String executablePath;
+    String confFilePath;
 
-    private String executablePath;
-    private String configuration;
-    private int listeningPort;
-    private String confFilePath;
-    private String shell = "bash -c";
-
-    public HAProxyController(String executablePath, int listeningPort, String confFilePath) {
-        this.executablePath = executablePath;
-        this.listeningPort = listeningPort;
+    public ConsulController(String consulPath, String confFilePath) {
+        this.executablePath = consulPath;
         this.confFilePath = confFilePath;
     }
 
-    public void startHAProxy() throws Exception {
-        // Check for configuration file
+    public void startConsul() throws Exception {
         File conf;
         conf = new File(confFilePath);
         if (!conf.exists()) {
-            System.err.println("Could not find haproxy configuration file!");
+            System.err.println("Could not find consul configuration file!");
             throw new Exception();
         }
 
-        // Start haproxy
+        // Start consul
         try {
-            String command = executablePath + " -f " + confFilePath;
+            String command = executablePath + " agent -dev -config-dir=" + confFilePath;
             Process p = execInShell(command);
-            System.out.println("Started HAProxy");
+            System.out.println("Started consul");
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    public void stopHAProxy() throws Exception {
-        // Kill haproxy process
-        String findPid = "pidof haproxy";
+    public void stopConsul() throws Exception {
+        String findPid = "pidof consul";
         Process process = execInShell(findPid);
         BufferedReader output = new BufferedReader(new InputStreamReader(process.getInputStream()));
         String out = "";
@@ -50,7 +47,7 @@ public class HAProxyController {
         }
         String killHaproxy = "kill -9 "+pid;
         execInShell(killHaproxy);
-        System.out.println("stopped HAProxy");
+        System.out.println("stopped consul");
     }
 
     private Process execInShell(String command) throws IOException {
@@ -58,4 +55,5 @@ public class HAProxyController {
         Process p = r.exec(new String[] {"bash", "-c", command});
         return p;
     }
+
 }

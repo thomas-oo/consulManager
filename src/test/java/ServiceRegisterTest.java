@@ -21,7 +21,6 @@ public class ServiceRegisterTest {
 
     @Before
     public void setUp() throws Exception {
-
     }
 
     @After

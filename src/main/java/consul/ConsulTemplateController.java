@@ -10,14 +10,8 @@ public class ConsulTemplateController{
     String consulAddressAndPort;
     String confFilePath;
 
-    public ConsulTemplateController(String executablePath, String consulAddressAndPort, String confFilePath) {
+    public ConsulTemplateController(String executablePath, String confFilePath, String consulAddressAndPort) {
         this.executablePath = executablePath;
-        if (!this.executablePath.endsWith("consul-template")) {
-            if (!this.executablePath.endsWith("/")) {
-                this.executablePath += "/";
-            }
-            this.executablePath += "consul-template";
-        }
         this.consulAddressAndPort = consulAddressAndPort;
         this.confFilePath = confFilePath;
     }
