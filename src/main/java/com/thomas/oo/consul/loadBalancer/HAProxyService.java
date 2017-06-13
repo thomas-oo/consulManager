@@ -1,15 +1,17 @@
-package loadBalancer;
+package com.thomas.oo.consul.loadBalancer;
 
-import util.BaseController;
+import com.thomas.oo.consul.util.BaseService;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
 
 import java.io.File;
 
-public class HAProxyController extends BaseController{
+@Service
+public class HAProxyService extends BaseService {
+    String executablePath;
+    String confFilePath;
 
-    private String executablePath;
-    private String confFilePath;
-
-    public HAProxyController(String executablePath, String confFilePath) {
+    public HAProxyService(@Value("${haproxy.execPath}")String executablePath, @Value("${haproxy.confPath}")String confFilePath) {
         this.executablePath = executablePath;
         this.confFilePath = confFilePath;
     }
@@ -37,5 +39,6 @@ public class HAProxyController extends BaseController{
     public void stopProcess() throws Exception {
         Runtime r = Runtime.getRuntime();
         r.exec("pkill haproxy");
+        System.out.println("Stopped HAProxy");
     }
 }

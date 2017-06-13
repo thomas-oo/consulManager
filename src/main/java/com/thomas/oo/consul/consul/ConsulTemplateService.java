@@ -1,16 +1,18 @@
-package consul;
+package com.thomas.oo.consul.consul;
 
-import util.BaseController;
+import com.thomas.oo.consul.util.BaseService;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
 
 import java.io.File;
 
-
-public class ConsulTemplateController extends BaseController{
+@Service
+public class ConsulTemplateService extends BaseService {
     String executablePath;
     String consulAddressAndPort;
     String confFilePath;
 
-    public ConsulTemplateController(String executablePath, String confFilePath, String consulAddressAndPort) {
+    public ConsulTemplateService(@Value("${consulTemplate.execPath}")String executablePath, @Value("${consulTemplate.confPath}")String confFilePath, @Value("${consulTemplate.consulAddressAndPort}")String consulAddressAndPort) {
         this.executablePath = executablePath;
         this.consulAddressAndPort = consulAddressAndPort;
         this.confFilePath = confFilePath;
@@ -37,5 +39,6 @@ public class ConsulTemplateController extends BaseController{
     public void stopProcess() throws Exception {
         Runtime r = Runtime.getRuntime();
         r.exec("pkill consul-template");
+        System.out.println("Stopped consul-template");
     }
 }

@@ -1,11 +1,8 @@
-package util;
+package com.thomas.oo.consul.util;
 
 import java.io.IOException;
 
-/**
- * Created by root on 6/12/17.
- */
-public abstract class BaseController {
+public abstract class BaseService {
     protected Process p;
     public abstract void startProcess() throws Exception;
     public void stopProcess() throws Exception {

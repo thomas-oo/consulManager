@@ -1,4 +1,4 @@
-import consul.ConsulController;
+import com.thomas.oo.consul.consul.ConsulService;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -8,11 +8,11 @@ import static org.junit.Assert.assertTrue;
 public class ConsulControllerTest {
     String consulPath = "/usr/local/bin/consul";
     String consulConfPath = "/root/Documents/consulProto/web.json";
-    ConsulController consulController;
+    ConsulService consulController;
 
     @Before
     public void setUp() throws Exception {
-        consulController = new ConsulController(consulPath, consulConfPath);
+        consulController = new ConsulService(consulPath, consulConfPath);
     }
 
     @After

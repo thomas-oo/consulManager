@@ -1,4 +1,4 @@
-import consul.ConsulTemplateController;
+import com.thomas.oo.consul.consul.ConsulTemplateService;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -9,11 +9,11 @@ public class ConsulTemplateControllerTest {
     String consulTemplatePath = "/usr/local/bin/consul-template";
     String confFilePath = "/root/Documents/consulProto/haproxy.json";
     String consulAddressAndPort = "localhost:8500";
-    ConsulTemplateController consulTemplateController;
+    ConsulTemplateService consulTemplateController;
 
     @Before
     public void setUp() throws Exception {
-        consulTemplateController = new ConsulTemplateController(consulTemplatePath, confFilePath, consulAddressAndPort);
+        consulTemplateController = new ConsulTemplateService(consulTemplatePath, confFilePath, consulAddressAndPort);
     }
 
     @After

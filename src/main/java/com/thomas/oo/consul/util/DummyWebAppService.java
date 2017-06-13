@@ -1,13 +1,13 @@
-package util;
+package com.thomas.oo.consul.util;
 
 import java.io.File;
 
 //Meant to start dummy spring-boot apps. This is only for prototyping
-public class DummyWebAppController extends BaseController{
+public class DummyWebAppService extends BaseService {
     String mavenPath;
     String webAppPath;
     int port;
-    public DummyWebAppController(String mavenPath, String webAppPath, int port) {
+    public DummyWebAppService(String mavenPath, String webAppPath, int port) {
         this.mavenPath = mavenPath;
         this.webAppPath = webAppPath;
         this.port = port;
@@ -28,5 +28,11 @@ public class DummyWebAppController extends BaseController{
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    @Override
+    public void stopProcess() throws Exception {
+        super.stopProcess();
+        System.out.println("Stopped web app on port: "+port);
     }
 }

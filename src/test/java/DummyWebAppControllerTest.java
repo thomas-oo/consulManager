@@ -1,18 +1,18 @@
+import com.thomas.oo.consul.util.DummyWebAppService;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import util.DummyWebAppController;
 
 import static org.junit.Assert.assertTrue;
 
 public class DummyWebAppControllerTest {
     String mavenPath = "/root/bin/maven/3.0.5/bin/mvn";
     String webAppPath = "/git/consulPrototype/simpleapp/pom.xml";
-    DummyWebAppController dummyWebAppController;//on 8080
+    DummyWebAppService dummyWebAppController;//on 8080
 
     @Before
     public void setUp() throws Exception {
-        dummyWebAppController = new DummyWebAppController(mavenPath, webAppPath, 8080);
+        dummyWebAppController = new DummyWebAppService(mavenPath, webAppPath, 8080);
     }
 
     @After
@@ -26,7 +26,7 @@ public class DummyWebAppControllerTest {
         assertTrue(confirmWebAppIsRunning(dummyWebAppController));
     }
 
-    private boolean confirmWebAppIsRunning(DummyWebAppController dummyWebAppController) {
+    private boolean confirmWebAppIsRunning(DummyWebAppService dummyWebAppController) {
         return (dummyWebAppController.getProcess().isAlive());
     }
 }

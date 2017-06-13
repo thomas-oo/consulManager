@@ -1,4 +1,4 @@
-import loadBalancer.HAProxyController;
+import com.thomas.oo.consul.loadBalancer.HAProxyService;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -8,10 +8,10 @@ import static org.junit.Assert.assertTrue;
 public class HAProxyControllerTest {
     String haproxyPath = "/usr/local/bin/haproxy";
     String confFilePath = "/root/Documents/consulProto/haproxy.conf";
-    HAProxyController haProxyController;
+    HAProxyService haProxyController;
     @Before
     public void setUp() throws Exception {
-        haProxyController = new HAProxyController(haproxyPath, confFilePath);
+        haProxyController = new HAProxyService(haproxyPath, confFilePath);
     }
 
     @After

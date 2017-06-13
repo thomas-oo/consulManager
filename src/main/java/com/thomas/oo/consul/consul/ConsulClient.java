@@ -1,4 +1,4 @@
-package consul;
+package com.thomas.oo.consul.consul;
 
 import com.google.common.collect.Sets;
 import com.orbitz.consul.AgentClient;
@@ -13,6 +13,8 @@ import com.orbitz.consul.model.catalog.CatalogService;
 import com.orbitz.consul.model.health.HealthCheck;
 import com.orbitz.consul.option.ImmutableQueryOptions;
 import com.orbitz.consul.option.QueryOptions;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -22,10 +24,15 @@ import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
+@Service
 public class ConsulClient {
     private static final String CRITICAL = "critical";
-    private static Consul consul = Consul.builder().build();
+    private final Consul consul;
 
+    @Autowired
+    public ConsulClient(Consul consul){
+        this.consul = consul;
+    }
 
     /**
      * Registers a local service at the desired port with no healthcheck
@@ -36,7 +43,7 @@ public class ConsulClient {
      * @param id                  The id of the node
      * @param tags                The tags associated with the node. These are single tags (ie they do not contain tag1ANDtag2)
      */
-    public static void registerLocalService(int port, String serviceName, String id, Set<String> tags) {
+    public void registerLocalService(int port, String serviceName, String id, Set<String> tags) {
         Set<Set<String>> powerSet = Sets.powerSet(tags);
         //powerset is immutable, make it mutable
         Set<TreeSet<String>> newPowerSet = new HashSet<TreeSet<String>>();
@@ -69,7 +76,7 @@ public class ConsulClient {
      * @param id          Id of the specific service (unique across service)
      * @return True if the service is healthy or warning, false if the service is critical
      */
-    public static boolean checkLocalService(String serviceName, String id) {
+    public boolean checkLocalService(String serviceName, String id) {
         HealthClient healthClient = consul.healthClient();
         List<HealthCheck> healthChecks = healthClient.getServiceChecks(serviceName).getResponse();
         for (HealthCheck healthCheck : healthChecks) {
@@ -87,7 +94,7 @@ public class ConsulClient {
      *
      * @param id Id of the specific service (unique across service)
      */
-    public static void deregisterLocalService(String id) {
+    public void deregisterLocalService(String id) {
         AgentClient agentClient = consul.agentClient();
         agentClient.deregister(id);
     }
@@ -99,7 +106,7 @@ public class ConsulClient {
      * @param tags Tags you want to filter the service on. The request services will include all the tags, there's no option for OR currently
      * @return
      */
-    public static List<CatalogService> queryForService(String serviceName, String... tags) {
+    public List<CatalogService> queryForService(String serviceName, String... tags) {
         //Multiple tags is actually broken in consul
         //Because of this, tags are designed internally to be AND'ed together and passed as a single tag
         //As such, registering tags also must be AND'ed together in every combination (power set)
@@ -130,7 +137,7 @@ public class ConsulClient {
      * @param url URL to perform GET requests
      * @param interval Interval to perform check in seconds
      */
-    public static void addNewHTTPCheck(String id, String url, int interval){
+    public void addNewHTTPCheck(String id, String url, int interval){
         AgentClient agentClient = consul.agentClient();
         String stringInterval = interval+"s";
         ImmutableCheck.Builder immutableCheckBuilder= ImmutableCheck.builder().serviceId(id).http(url).interval(stringInterval).name("HTTP check for '"+id+"'").id("service:"+id);
@@ -144,7 +151,7 @@ public class ConsulClient {
      * @param script Local script to execute, can point to a script file
      * @param interval Interval to perform check in seconds
      */
-    public static void addNewScriptCheck(String id, String script, int interval){
+    public void addNewScriptCheck(String id, String script, int interval){
         AgentClient agentClient = consul.agentClient();
         String stringInterval = interval+"s";
         ImmutableCheck.Builder immutableCheckBuilder= ImmutableCheck.builder().serviceId(id).script(script).interval(stringInterval).name("Script check for '"+id+"'").id("service:"+id);
@@ -158,7 +165,7 @@ public class ConsulClient {
      * @param addressAndPort Address and port of connection to TCP
      * @param interval Interval to perform check in seconds
      */
-    public static void addNewTCPCheck(String id, String addressAndPort, int interval){
+    public void addNewTCPCheck(String id, String addressAndPort, int interval){
         AgentClient agentClient = consul.agentClient();
         String stringInterval = interval+"s";
         ImmutableCheck.Builder immutableCheckBuilder= ImmutableCheck.builder().serviceId(id).tcp(addressAndPort).interval(stringInterval).name("TCP check for '"+id+"'").id("service:"+id);
@@ -171,7 +178,7 @@ public class ConsulClient {
      * @param id Id of the specific service (unique across service)
      * @param interval Interval to perform check in seconds
      */
-    public static void addNewTTLCheck(String id, int interval){
+    public void addNewTTLCheck(String id, int interval){
         AgentClient agentClient = consul.agentClient();
         String stringInterval = interval+"s";
         ImmutableCheck.Builder immutableCheckBuilder= ImmutableCheck.builder().serviceId(id).ttl(stringInterval).name("TTL check for '"+id+"'").id("service:"+id);
@@ -179,7 +186,7 @@ public class ConsulClient {
         agentClient.registerCheck(check);
     }
 
-    public static void passTTLCheck(String id) throws NotRegisteredException {
+    public void passTTLCheck(String id) throws NotRegisteredException {
         AgentClient agentClient = consul.agentClient();
         agentClient.pass(id);
     }
