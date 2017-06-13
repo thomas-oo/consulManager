@@ -99,4 +99,15 @@ public class ConsulClientTest {
         Thread.sleep(1000);
         assertTrue(consulClient.checkLocalService(testServiceName, testServiceId));
     }
+
+    @Test
+    public void removeANDTagsFromTest() throws Exception {
+        List<String> tags = Arrays.asList("active", "version1");
+        consulClient.registerLocalService(testPort, testServiceName, testServiceId, new HashSet<String>(tags));
+        List<CatalogService> resultCatalogServices = consulClient.queryForService(testServiceName);
+        assertTrue(resultCatalogServices.size()==1);
+        List<String> resultTags = resultCatalogServices.get(0).getServiceTags();
+        assertTrue(resultTags.containsAll(tags));
+        assertTrue(resultTags.size()==tags.size());
+    }
 }

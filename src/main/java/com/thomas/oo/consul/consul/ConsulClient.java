@@ -10,12 +10,14 @@ import com.orbitz.consul.model.agent.Check;
 import com.orbitz.consul.model.agent.ImmutableCheck;
 import com.orbitz.consul.model.agent.Registration;
 import com.orbitz.consul.model.catalog.CatalogService;
+import com.orbitz.consul.model.catalog.ImmutableCatalogService;
 import com.orbitz.consul.model.health.HealthCheck;
 import com.orbitz.consul.option.ImmutableQueryOptions;
 import com.orbitz.consul.option.QueryOptions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -23,6 +25,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.stream.Collectors;
 
 @Service
 public class ConsulClient {
@@ -113,7 +116,8 @@ public class ConsulClient {
         CatalogClient catalogClient = consul.catalogClient();
         if(tags.length==0){
             List<CatalogService> catalogServices = catalogClient.getService(serviceName).getResponse();
-            return catalogServices;
+            List<CatalogService> resultCatalogServices = removeANDTagsFrom(catalogServices);
+            return resultCatalogServices;
         }
 
         Arrays.sort(tags);
@@ -128,6 +132,27 @@ public class ConsulClient {
         }
         QueryOptions queryOptions = ImmutableQueryOptions.builder().addTag(totalTag).build();
         List<CatalogService> catalogServices = catalogClient.getService(serviceName, queryOptions).getResponse();
+        List<CatalogService> resultCatalogServices = removeANDTagsFrom(catalogServices);
+        return resultCatalogServices;
+    }
+
+
+    //Todo:TEST
+    public List<String> queryForAllServices(String... tags){
+        CatalogClient catalogClient = consul.catalogClient();
+        Arrays.sort(tags);
+        String totalTag="";
+        if(tags.length>=1){
+            totalTag=tags[0];
+        }
+        if(tags.length>1){
+            for(int i = 1; i<tags.length; i++){
+                totalTag+="AND"+tags[i];
+            }
+        }
+        QueryOptions queryOptions = ImmutableQueryOptions.builder().addTag(totalTag).build();
+        List<String> catalogServices = new ArrayList<>();
+        catalogServices.addAll(catalogClient.getServices(queryOptions).getResponse().keySet());
         return catalogServices;
     }
 
@@ -189,6 +214,19 @@ public class ConsulClient {
     public void passTTLCheck(String id) throws NotRegisteredException {
         AgentClient agentClient = consul.agentClient();
         agentClient.pass(id);
+    }
+
+    public List<CatalogService> removeANDTagsFrom(List<CatalogService> services){
+        List<CatalogService> resultServices = new ArrayList<>();
+        Iterator<CatalogService> iterator = services.iterator();
+        while(iterator.hasNext()){
+            CatalogService catalogService = iterator.next();
+            List<String> tags = catalogService.getServiceTags();
+            List<String> resultTags = tags.stream().filter(tag -> !tag.contains("AND")).collect(Collectors.toList());
+            CatalogService resultCatalogService = ImmutableCatalogService.copyOf(catalogService).withServiceTags(resultTags);
+            resultServices.add(resultCatalogService);
+        }
+        return resultServices;
     }
 }
 
