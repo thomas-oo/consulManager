@@ -3,7 +3,7 @@ package com.thomas.oo.consul.util;
 import java.io.File;
 
 //Meant to start dummy spring-boot apps. This is only for prototyping
-public class DummyWebAppService extends BaseService {
+public class DummyWebAppService extends AbstractService {
     String mavenPath;
     String webAppPath;
     int port;
@@ -32,7 +32,7 @@ public class DummyWebAppService extends BaseService {
 
     @Override
     public void stopProcess() throws Exception {
-        super.stopProcess();
+        p.destroyForcibly();
         System.out.println("Stopped web app on port: "+port);
     }
 }

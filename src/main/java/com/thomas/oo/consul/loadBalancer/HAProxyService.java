@@ -1,13 +1,13 @@
 package com.thomas.oo.consul.loadBalancer;
 
-import com.thomas.oo.consul.util.BaseService;
+import com.thomas.oo.consul.util.AbstractService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
 
 @Service
-public class HAProxyService extends BaseService {
+public class HAProxyService extends AbstractService {
     String executablePath;
     String confFilePath;
 

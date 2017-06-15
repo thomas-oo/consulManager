@@ -1,6 +1,6 @@
 package com.thomas.oo.consul.consul;
 
-import com.thomas.oo.consul.util.BaseService;
+import com.thomas.oo.consul.util.AbstractService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -8,7 +8,7 @@ import java.io.File;
 
 //This is a consul service but in DEV MODE. This is only for prototyping
 @Service
-public class ConsulService extends BaseService {
+public class ConsulService extends AbstractService {
     String executablePath;
     String confFilePath;
 

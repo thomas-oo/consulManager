@@ -1,6 +1,6 @@
-import com.google.common.collect.Sets;
 import com.orbitz.consul.Consul;
 import com.orbitz.consul.model.catalog.CatalogService;
+import com.thomas.oo.consul.DTO.ServiceDTO;
 import com.thomas.oo.consul.consul.ConsulClient;
 import com.thomas.oo.consul.consul.ConsulService;
 import org.junit.After;
@@ -10,10 +10,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import static org.junit.Assert.assertTrue;
 
@@ -28,6 +25,11 @@ public class ConsulClientTest {
     String testServiceName = "testService";
     String testServiceId = "test";
     int testPort = 7070;
+
+    ServiceDTO localServiceNoTags = new ServiceDTO(testPort, testServiceName, testServiceId);
+    ServiceDTO localServiceTags = new ServiceDTO(testPort, testServiceName, testServiceId, "tag1","tag2","tag3","tag4","tag5");
+    ServiceDTO remoteServiceNoTags = new ServiceDTO("localhost", testPort, testServiceName, testServiceId);
+    ServiceDTO remoteServiceTags = new ServiceDTO("localhost", testPort, testServiceName, testServiceId, "tag1","tag2","tag3","tag4","tag5");
 
     @BeforeClass
     public static void setUpClass() throws Exception {
@@ -49,42 +51,75 @@ public class ConsulClientTest {
     public void tearDown() throws Exception {
         List<CatalogService> services = consulClient.queryForService(testServiceName);
         for (CatalogService service : services){
-            consulClient.deregisterLocalService(service.getServiceId());
+            consulClient.deregisterService(service.getServiceId());
         }
     }
 
     @Test
     public void registerLocalServiceWithNoTagsTest() throws Exception {
-        consulClient.registerLocalService(testPort, testServiceName, testServiceId, Collections.<String>emptySet());
+        consulClient.registerLocalService(localServiceNoTags);
         consulClient.addNewTTLCheck(testServiceId, 10);
         consulClient.passTTLCheck(testServiceId);
-        assertTrue(consulClient.checkLocalService(testServiceName, testServiceId));
+        assertTrue(consulClient.checkService(testServiceName, testServiceId));
     }
 
     @Test
     public void registerLocalServiceWithTagsTest() throws Exception {
-        Set<String> tags = Sets.newHashSet("tag1","tag2","tag3","tag4","tag5");
-        consulClient.registerLocalService(testPort, testServiceName, testServiceId, tags);
+        consulClient.registerLocalService(localServiceTags);
         consulClient.addNewTTLCheck(testServiceId, 10);
         consulClient.passTTLCheck(testServiceId);
-        assertTrue(consulClient.checkLocalService(testServiceName, testServiceId));
+        assertTrue(consulClient.checkService(testServiceName, testServiceId));
+    }
+
+    @Test
+    public void registerRemoteServiceWithNoTagsTest() throws Exception {
+        consulClient.registerRemoteService(remoteServiceNoTags);
+        consulClient.addNewTTLCheck(testServiceId, 10);
+        consulClient.passTTLCheck(testServiceId);
+        assertTrue(consulClient.checkService(testServiceName, testServiceId));
+    }
+
+    @Test
+    public void registerRemoteServiceWithTagsTest() throws Exception {
+        consulClient.registerRemoteService(remoteServiceTags);
+        consulClient.addNewTTLCheck(testServiceId, 10);
+        consulClient.passTTLCheck(testServiceId);
+        assertTrue(consulClient.checkService(testServiceName, testServiceId));
+
+    }
+
+    @Test
+    public void queryForAllServicesWithNoTagsTest() throws Exception {
+        consulClient.registerLocalService(localServiceNoTags);
+        assertTrue(consulClient.queryForAllServices().contains(localServiceNoTags.getServiceName()));
+    }
+
+    @Test
+    public void queryForAllServicesWithTagsTest() throws Exception {
+        consulClient.registerLocalService(localServiceNoTags);
+        List<CatalogService> services = consulClient.queryForAllServices("tag1");
+        assertTrue(services.stream().noneMatch(s -> s.getServiceId().equalsIgnoreCase(localServiceNoTags.getServiceId())));
+        consulClient.registerLocalService(localServiceTags);
+        services = consulClient.queryForAllServices("tag1");
+        assertTrue(services.stream().anyMatch(s -> s.getServiceId().equalsIgnoreCase(localServiceNoTags.getServiceId())));
     }
 
     @Test
     public void queryForServiceWithNoTagsTest() throws Exception {
-        consulClient.registerLocalService(testPort, testServiceName, testServiceId, Collections.<String>emptySet());
+        consulClient.registerLocalService(localServiceNoTags);
         assertTrue(consulClient.queryForService(testServiceName, "active").size() == 0);
         List<CatalogService> catalogServices = consulClient.queryForService(testServiceName);
         assertTrue(catalogServices.size() == 1);
         assertTrue(catalogServices.get(0).getAddress().equalsIgnoreCase("127.0.0.1"));
+        catalogServices = consulClient.queryForService(testServiceName);
         assertTrue(catalogServices.get(0).getServicePort()==testPort);
     }
 
     @Test
     public void queryForServiceWithTagsTest() throws Exception {
-        consulClient.registerLocalService(testPort, testServiceName, testServiceId, new HashSet<String>(Arrays.asList("active", "version1")));
-        consulClient.registerLocalService(testPort + 1, testServiceName, testServiceId +"1", new HashSet<String>(Arrays.asList("active", "version2")));
-        consulClient.registerLocalService(testPort + 2, testServiceName, testServiceId +"2", new HashSet<String>(Arrays.asList("disabled", "version1")));
+        consulClient.registerLocalService(new ServiceDTO(testPort, testServiceName, testServiceId, "active", "version1"));
+        consulClient.registerLocalService(new ServiceDTO(testPort + 1, testServiceName, testServiceId +"1","active", "version2"));
+        consulClient.registerLocalService(new ServiceDTO(testPort + 2, testServiceName, testServiceId +"2", "disabled", "version1"));
 
         assertTrue(consulClient.queryForService(testServiceName, "active").size() == 2);
         assertTrue(consulClient.queryForService(testServiceName, "version1").size() == 2);
@@ -93,21 +128,21 @@ public class ConsulClientTest {
 
     @Test
     public void addNewTCPCheckTest() throws Exception {
-        consulClient.registerLocalService(testPort, testServiceName, testServiceId, new HashSet<String>(Arrays.asList("active", "version1")));
+        consulClient.registerLocalService(new ServiceDTO(testPort, testServiceName, testServiceId, "active", "version1"));
         //connect to consul port, one that is already open.
         consulClient.addNewTCPCheck(testServiceId, "localhost:8500", 1);
         Thread.sleep(1000);
-        assertTrue(consulClient.checkLocalService(testServiceName, testServiceId));
+        assertTrue(consulClient.checkService(testServiceName, testServiceId));
     }
 
     @Test
     public void removeANDTagsFromTest() throws Exception {
-        List<String> tags = Arrays.asList("active", "version1");
-        consulClient.registerLocalService(testPort, testServiceName, testServiceId, new HashSet<String>(tags));
+        String[] tags = {"active", "version1"};
+        consulClient.registerLocalService(new ServiceDTO(testPort, testServiceName, testServiceId, tags));
         List<CatalogService> resultCatalogServices = consulClient.queryForService(testServiceName);
         assertTrue(resultCatalogServices.size()==1);
         List<String> resultTags = resultCatalogServices.get(0).getServiceTags();
-        assertTrue(resultTags.containsAll(tags));
-        assertTrue(resultTags.size()==tags.size());
+        assertTrue(resultTags.containsAll(Arrays.asList(tags)));
+        assertTrue(resultTags.size()==tags.length);
     }
 }

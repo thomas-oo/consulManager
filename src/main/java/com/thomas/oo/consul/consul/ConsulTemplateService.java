@@ -1,13 +1,13 @@
 package com.thomas.oo.consul.consul;
 
-import com.thomas.oo.consul.util.BaseService;
+import com.thomas.oo.consul.util.AbstractService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
 
 @Service
-public class ConsulTemplateService extends BaseService {
+public class ConsulTemplateService extends AbstractService {
     String executablePath;
     String consulAddressAndPort;
     String confFilePath;
