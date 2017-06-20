@@ -5,6 +5,7 @@ import com.orbitz.consul.AgentClient;
 import com.orbitz.consul.CatalogClient;
 import com.orbitz.consul.Consul;
 import com.orbitz.consul.HealthClient;
+import com.orbitz.consul.KeyValueClient;
 import com.orbitz.consul.NotRegisteredException;
 import com.orbitz.consul.model.agent.Check;
 import com.orbitz.consul.model.agent.ImmutableCheck;
@@ -13,8 +14,10 @@ import com.orbitz.consul.model.agent.Registration;
 import com.orbitz.consul.model.catalog.CatalogService;
 import com.orbitz.consul.model.catalog.ImmutableCatalogService;
 import com.orbitz.consul.model.health.HealthCheck;
+import com.orbitz.consul.model.kv.Value;
 import com.orbitz.consul.option.ImmutableQueryOptions;
 import com.orbitz.consul.option.QueryOptions;
+import com.thomas.oo.consul.DTO.CheckDTO;
 import com.thomas.oo.consul.DTO.ServiceDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -74,30 +77,19 @@ public class ConsulClient {
         return;
     }
 
-    //Todo:TEST
     public List<CatalogService> queryForAllServices(String... tags){
         CatalogClient catalogClient = consul.catalogClient();
-        Arrays.sort(tags);
-        String totalTag="";
-        if(tags.length>=1){
-            totalTag=tags[0];
-        }
-        if(tags.length>1){
-            for(int i = 1; i<tags.length; i++){
-                totalTag+="AND"+tags[i];
-            }
-        }
-        final String tag = totalTag;
+        String totalTag = createTotalTag(tags);
         List<String> serviceNames = new ArrayList<>();
         Map<String, List<String>> servicesMap = catalogClient.getServices().getResponse();
         //filter
-        if(!tag.isEmpty()){
-            servicesMap.entrySet().removeIf(e -> !e.getValue().contains(tag));
+        if(!totalTag.isEmpty()){
+            servicesMap.entrySet().removeIf(e -> !e.getValue().contains(totalTag));
         }
         serviceNames.addAll(servicesMap.keySet());
         List<CatalogService> services = new ArrayList<>();
         for(String serviceName : serviceNames){
-            services.addAll(queryForService(serviceName, tag));
+            services.addAll(queryForService(serviceName, totalTag));
         }
         return services;
     }
@@ -122,14 +114,12 @@ public class ConsulClient {
         return resultCatalogServices;
     }
 
-    //Todo:TEST
     public Optional<CatalogService> queryForServiceByServiceId(String serviceName, String serviceId){
         List<CatalogService> catalogServices = queryForService(serviceName);
         Optional<CatalogService> service = catalogServices.stream().filter(s -> s.getServiceId().equalsIgnoreCase(serviceId)).findFirst();
         return service;
     }
 
-    //Todo:TEST
     public Optional<CatalogService> queryForServiceByAddressAndPort(String serviceName, String address, int port){
         List<CatalogService> catalogServices = queryForService(serviceName);
         Optional<CatalogService> service = catalogServices.stream().filter(s -> s.getAddress().equalsIgnoreCase(address)&&s.getServicePort()==port).findFirst();
@@ -166,13 +156,12 @@ public class ConsulClient {
     /**
      *
      * @param serviceId Id of the specific service (unique across service)
-     * @param url URL to perform GET requests
-     * @param interval Interval to perform check in seconds
+     * @param httpCheckDTO
      */
-    public void addNewHTTPCheck(String serviceId, String url, int interval){
+    public void addNewHTTPCheck(String serviceId, CheckDTO.HTTPCheckDTO httpCheckDTO){
         AgentClient agentClient = consul.agentClient();
-        String stringInterval = interval+"s";
-        ImmutableCheck.Builder immutableCheckBuilder= ImmutableCheck.builder().serviceId(serviceId).http(url).interval(stringInterval).name("HTTP check for '"+serviceId+"'").id("service:"+serviceId);
+        String stringInterval = httpCheckDTO.getInterval()+"s";
+        ImmutableCheck.Builder immutableCheckBuilder= ImmutableCheck.builder().serviceId(serviceId).http(httpCheckDTO.getUrl()).interval(stringInterval).name("HTTP check for '"+serviceId+"'").id(httpCheckDTO.getCheckId());
         Check check = immutableCheckBuilder.build();
         agentClient.registerCheck(check);
     }
@@ -180,13 +169,12 @@ public class ConsulClient {
     /**
      *
      * @param serviceId Id of the specific service (unique across service)
-     * @param script Local script to execute, can point to a script file
-     * @param interval Interval to perform check in seconds
+     * @param scriptCheckDTO
      */
-    public void addNewScriptCheck(String serviceId, String script, int interval){
+    public void addNewScriptCheck(String serviceId, CheckDTO.ScriptCheckDTO scriptCheckDTO){
         AgentClient agentClient = consul.agentClient();
-        String stringInterval = interval+"s";
-        ImmutableCheck.Builder immutableCheckBuilder= ImmutableCheck.builder().serviceId(serviceId).script(script).interval(stringInterval).name("Script check for '"+serviceId+"'").id("service:"+serviceId);
+        String stringInterval = scriptCheckDTO.getInterval()+"s";
+        ImmutableCheck.Builder immutableCheckBuilder= ImmutableCheck.builder().serviceId(serviceId).script(scriptCheckDTO.getScript()).interval(stringInterval).name("Script check for '"+serviceId+"'").id(scriptCheckDTO.getCheckId());
         Check check = immutableCheckBuilder.build();
         agentClient.registerCheck(check);
     }
@@ -194,13 +182,12 @@ public class ConsulClient {
     /**
      *
      * @param serviceId Id of the specific service (unique across service)
-     * @param addressAndPort Address and port of connection to TCP
-     * @param interval Interval to perform check in seconds
+     * @param tcpCheckDTO
      */
-    public void addNewTCPCheck(String serviceId, String addressAndPort, int interval){
+    public void addNewTCPCheck(String serviceId, CheckDTO.TCPCheckDTO tcpCheckDTO){
         AgentClient agentClient = consul.agentClient();
-        String stringInterval = interval+"s";
-        ImmutableCheck.Builder immutableCheckBuilder= ImmutableCheck.builder().serviceId(serviceId).tcp(addressAndPort).interval(stringInterval).name("TCP check for '"+serviceId+"'").id("service:"+serviceId);
+        String stringInterval = tcpCheckDTO.getInterval()+"s";
+        ImmutableCheck.Builder immutableCheckBuilder= ImmutableCheck.builder().serviceId(serviceId).tcp(tcpCheckDTO.getAddressAndPort()).interval(stringInterval).name("TCP check for '"+serviceId+"'").id(tcpCheckDTO.getCheckId());
         Check check = immutableCheckBuilder.build();
         agentClient.registerCheck(check);
     }
@@ -208,19 +195,28 @@ public class ConsulClient {
     /**
      * A kind of "dead man switch" check, it is up to the service to perform a PUT to the pass endpoint.
      * @param serviceId Id of the specific service (unique across service)
-     * @param interval Interval to perform check in seconds
+     * @param ttlCheckDTO
      */
-    public void addNewTTLCheck(String serviceId, int interval){
+    public void addNewTTLCheck(String serviceId, CheckDTO.TTLCheckDTO ttlCheckDTO){
         AgentClient agentClient = consul.agentClient();
-        String stringInterval = interval+"s";
-        ImmutableCheck.Builder immutableCheckBuilder= ImmutableCheck.builder().serviceId(serviceId).ttl(stringInterval).name("TTL check for '"+serviceId+"'").id("service:"+serviceId);
+        String stringInterval = ttlCheckDTO.getInterval()+"s";
+        ImmutableCheck.Builder immutableCheckBuilder= ImmutableCheck.builder().serviceId(serviceId).ttl(stringInterval).name("TTL check for '"+serviceId+"'").id(ttlCheckDTO.getCheckId());
         Check check = immutableCheckBuilder.build();
         agentClient.registerCheck(check);
     }
 
-    public void passTTLCheck(String serviceId) throws NotRegisteredException {
+    public void passTTLCheck(ServiceDTO serviceDTO) throws NotRegisteredException {
+
         AgentClient agentClient = consul.agentClient();
-        agentClient.pass(serviceId);
+        //get checkId of service
+        List<HealthCheck> healthChecks = getHealthChecks(serviceDTO);
+        HealthCheck ttlCheck = healthChecks.stream().filter(h -> h.getName().contains("TTL")).findFirst().get();
+        agentClient.passCheck(ttlCheck.getCheckId());
+    }
+
+    public void removeCheck(String checkId){
+        AgentClient agentClient = consul.agentClient();
+        agentClient.deregisterCheck(checkId);
     }
 
     public List<CatalogService> removeANDTagsFrom(List<CatalogService> services){
@@ -261,7 +257,7 @@ public class ConsulClient {
         return newTags;
     }
 
-    private String createTotalTag(String[] tags) {
+    public String createTotalTag(String[] tags) {
         Arrays.sort(tags);
         String totalTag="";
         if(tags.length>=1){
@@ -275,5 +271,41 @@ public class ConsulClient {
         return totalTag;
     }
 
+    //get healthchecks for the specific service
+    public List<HealthCheck> getHealthChecks(ServiceDTO serviceDTO){
+        HealthClient healthClient = consul.healthClient();
+        List<HealthCheck> healthChecks = healthClient.getServiceChecks(serviceDTO.getServiceName()).getResponse();
+        healthChecks = healthChecks.stream().filter(h -> h.getServiceId().get().equalsIgnoreCase(serviceDTO.getServiceId())).collect(Collectors.toList());
+        consul.destroy();
+        return healthChecks;
+    }
+
+    public Optional<HealthCheck> getHealthCheck(ServiceDTO serviceDTO, String checkId){
+        HealthClient healthClient = consul.healthClient();
+        List<HealthCheck> healthChecks = healthClient.getServiceChecks(serviceDTO.getServiceName()).getResponse();
+        Optional<HealthCheck> healthCheck = healthChecks.stream().filter(h -> h.getServiceId().get().equalsIgnoreCase(serviceDTO.getServiceId())&&h.getCheckId().equalsIgnoreCase(checkId)).findFirst();
+        return healthCheck;
+    }
+
+    public String getValue(String key){
+        KeyValueClient keyValueClient = consul.keyValueClient();
+        com.google.common.base.Optional<Value> value = keyValueClient.getValue(key);
+        if(!value.isPresent()){
+            return "";
+        }else{
+            return value.get().getValueAsString().get();
+        }
+    }
+
+    public boolean putValue(String key, String value){
+        KeyValueClient keyValueClient = consul.keyValueClient();
+        return keyValueClient.putValue(key, value);
+    }
+
+    //Deletes the exact matching key. Not recursive
+    public void deleteKey(String key){
+        KeyValueClient keyValueClient = consul.keyValueClient();
+        keyValueClient.deleteKey(key);
+    }
 }
 

@@ -21,7 +21,7 @@ import static org.junit.Assert.assertTrue;
 /**
  * Testing whole stack from haproxy to consul and service. Testing by passing http requests to proxy
  */
-public class ConsulIntegrationTest {
+public class HAProxyIntegrationTest {
     static ConsulService consulController;
     static ConsulTemplateService consulTemplateController;
     static HAProxyService haProxyController;
@@ -103,7 +103,6 @@ public class ConsulIntegrationTest {
         String serviceNameHeader = "X-service-name";
         String tagNameHeader = "X-tag-name";
         //Try to route to active and spring web service
-        //TODO: wrap this in a class that handles this
         String service = "web";
         String tag = "activeANDspring";
         HttpClient httpClient = HttpClientBuilder.create().build();
@@ -131,7 +130,6 @@ public class ConsulIntegrationTest {
         String serviceNameHeader = "X-service-name";
         String tagNameHeader = "X-tag-name";
         //Try to route to active and spring web service
-        //TODO: wrap this in a class that handles this
         String service = "web";
         String tag = "spring";
         HttpClient httpClient = HttpClientBuilder.create().build();

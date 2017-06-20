@@ -1,5 +1,6 @@
 import com.orbitz.consul.Consul;
 import com.orbitz.consul.model.catalog.CatalogService;
+import com.thomas.oo.consul.DTO.CheckDTO;
 import com.thomas.oo.consul.DTO.ServiceDTO;
 import com.thomas.oo.consul.consul.ConsulClient;
 import com.thomas.oo.consul.consul.ConsulService;
@@ -11,7 +12,9 @@ import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 public class ConsulClientTest {
@@ -58,40 +61,48 @@ public class ConsulClientTest {
     @Test
     public void registerLocalServiceWithNoTagsTest() throws Exception {
         consulClient.registerLocalService(localServiceNoTags);
-        consulClient.addNewTTLCheck(testServiceId, 10);
-        consulClient.passTTLCheck(testServiceId);
+        CheckDTO.TTLCheckDTO ttlCheckDTO = new CheckDTO.TTLCheckDTO();
+        ttlCheckDTO.setInterval(10);
+        consulClient.addNewTTLCheck(testServiceId, ttlCheckDTO);
+        consulClient.passTTLCheck(localServiceNoTags);
         assertTrue(consulClient.checkService(testServiceName, testServiceId));
     }
 
     @Test
     public void registerLocalServiceWithTagsTest() throws Exception {
         consulClient.registerLocalService(localServiceTags);
-        consulClient.addNewTTLCheck(testServiceId, 10);
-        consulClient.passTTLCheck(testServiceId);
+        CheckDTO.TTLCheckDTO ttlCheckDTO = new CheckDTO.TTLCheckDTO();
+        ttlCheckDTO.setInterval(10);
+        consulClient.addNewTTLCheck(testServiceId, ttlCheckDTO);
+        consulClient.passTTLCheck(localServiceTags);
         assertTrue(consulClient.checkService(testServiceName, testServiceId));
     }
 
     @Test
     public void registerRemoteServiceWithNoTagsTest() throws Exception {
         consulClient.registerRemoteService(remoteServiceNoTags);
-        consulClient.addNewTTLCheck(testServiceId, 10);
-        consulClient.passTTLCheck(testServiceId);
+        CheckDTO.TTLCheckDTO ttlCheckDTO = new CheckDTO.TTLCheckDTO();
+        ttlCheckDTO.setInterval(10);
+        consulClient.addNewTTLCheck(testServiceId, ttlCheckDTO);
+        consulClient.passTTLCheck(remoteServiceNoTags);
         assertTrue(consulClient.checkService(testServiceName, testServiceId));
     }
 
     @Test
     public void registerRemoteServiceWithTagsTest() throws Exception {
         consulClient.registerRemoteService(remoteServiceTags);
-        consulClient.addNewTTLCheck(testServiceId, 10);
-        consulClient.passTTLCheck(testServiceId);
+        CheckDTO.TTLCheckDTO ttlCheckDTO = new CheckDTO.TTLCheckDTO();
+        ttlCheckDTO.setInterval(10);
+        consulClient.addNewTTLCheck(testServiceId, ttlCheckDTO);
+        consulClient.passTTLCheck(remoteServiceTags);
         assertTrue(consulClient.checkService(testServiceName, testServiceId));
-
     }
 
     @Test
     public void queryForAllServicesWithNoTagsTest() throws Exception {
         consulClient.registerLocalService(localServiceNoTags);
-        assertTrue(consulClient.queryForAllServices().contains(localServiceNoTags.getServiceName()));
+        List<CatalogService> services = consulClient.queryForAllServices();
+        assertTrue(services.stream().anyMatch(s -> s.getServiceId().equalsIgnoreCase(localServiceNoTags.getServiceId())));
     }
 
     @Test
@@ -130,7 +141,10 @@ public class ConsulClientTest {
     public void addNewTCPCheckTest() throws Exception {
         consulClient.registerLocalService(new ServiceDTO(testPort, testServiceName, testServiceId, "active", "version1"));
         //connect to consul port, one that is already open.
-        consulClient.addNewTCPCheck(testServiceId, "localhost:8500", 1);
+        CheckDTO.TCPCheckDTO tcpCheckDTO = new CheckDTO.TCPCheckDTO();
+        tcpCheckDTO.setAddressAndPort("localhost:8500");
+        tcpCheckDTO.setInterval(1);
+        consulClient.addNewTCPCheck(testServiceId, tcpCheckDTO);
         Thread.sleep(1000);
         assertTrue(consulClient.checkService(testServiceName, testServiceId));
     }
@@ -144,5 +158,27 @@ public class ConsulClientTest {
         List<String> resultTags = resultCatalogServices.get(0).getServiceTags();
         assertTrue(resultTags.containsAll(Arrays.asList(tags)));
         assertTrue(resultTags.size()==tags.length);
+    }
+
+    @Test
+    public void keyValueTest() throws Exception {
+        String key = "testKey";
+        String value = "testValue";
+        consulClient.putValue(key, value);
+        assertTrue(consulClient.getValue(key).equals(value));
+        consulClient.deleteKey(key);
+        assertTrue(consulClient.getValue(key).equals(""));
+    }
+
+    @Test
+    public void removeCheckTest() throws Exception {
+        CheckDTO.TTLCheckDTO ttlCheckDTO = new CheckDTO.TTLCheckDTO();
+        ttlCheckDTO.setCheckId(UUID.randomUUID().toString());
+        ttlCheckDTO.setInterval(10);
+        consulClient.registerLocalService(localServiceNoTags);
+        consulClient.addNewTTLCheck(localServiceNoTags.getServiceId(), ttlCheckDTO);
+        assertTrue(consulClient.getHealthCheck(localServiceNoTags, ttlCheckDTO.getCheckId()).isPresent());
+        consulClient.removeCheck(ttlCheckDTO.getCheckId());
+        assertFalse(consulClient.getHealthCheck(localServiceNoTags, ttlCheckDTO.getCheckId()).isPresent());
     }
 }

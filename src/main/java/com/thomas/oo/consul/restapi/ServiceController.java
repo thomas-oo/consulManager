@@ -4,7 +4,6 @@ import com.google.gson.Gson;
 import com.orbitz.consul.model.catalog.CatalogService;
 import com.thomas.oo.consul.DTO.ServiceDTO;
 import com.thomas.oo.consul.consul.ConsulClient;
-import com.thomas.oo.consul.consul.ConsulService;
 import com.thomas.oo.consul.consul.ConsulTemplateService;
 import com.thomas.oo.consul.loadBalancer.HAProxyService;
 import org.apache.http.HttpResponse;
@@ -13,6 +12,7 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.util.EntityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -33,19 +33,16 @@ import java.util.UUID;
 /**
  * Represents the service endpoint. Will be used for CRUD of services in consul.
  */
-//TODO:Write Postman collection to test this endpoint
 @RestController
-@RequestMapping("/services/")
 public class ServiceController {
     //Client
     private ConsulClient consulClient;
     //Services
-    private ConsulService consulService;
     private ConsulTemplateService consulTemplateService;
     private HAProxyService haProxyService;
     //HAProxy address&port
-    //TODO:read these from config
-    private String haProxyAddress = "http://localhost:8000";
+    @Value("${haproxy.proxyAddressAndPort}")
+    private String haProxyAddress;
     private final String serviceNameHeader = "X-service-name";
     private final String tagNameHeader = "X-tag-name";
     private final String forwardedHostHeader = "X-Forwarded-Host";
@@ -54,18 +51,15 @@ public class ServiceController {
     private final String locationHeader = "Location";
 
     @Autowired
-    public ServiceController(ConsulClient consulClient, ConsulService consulService, ConsulTemplateService consulTemplateService, HAProxyService haProxyService){
+    public ServiceController(ConsulClient consulClient, ConsulTemplateService consulTemplateService, HAProxyService haProxyService){
         this.consulClient = consulClient;
-        this.consulService = consulService;
         this.consulTemplateService = consulTemplateService;
         this.haProxyService = haProxyService;
         startServices();
     }
 
-    //TODO:add shutdown hooks to stop these services gracefully
     private void startServices() {
         try {
-            consulService.startProcess();
             consulTemplateService.startProcess();
             haProxyService.startProcess();
         } catch (Exception e) {
@@ -74,18 +68,12 @@ public class ServiceController {
         }
     }
 
-    //Hello world
-    @RequestMapping("hello")
-    public String helloWorld(){
-        return "Hello world!";
-    }
-
     /**
      * Get all services
      * @param tags Tags to filter on
      * @return Services matching query
      */
-    @RequestMapping(value = "", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+    @RequestMapping(value = "/services/", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> getAllServices(@RequestParam(value = "tags", defaultValue = "") String...tags){
         String json = new Gson().toJson(consulClient.queryForAllServices(tags));
         return new ResponseEntity(json, HttpStatus.OK);
@@ -98,18 +86,20 @@ public class ServiceController {
      * @param tags Tags to filter on
      * @return One service that is reachable. Service returned may change due to load balancing
      */
-    @RequestMapping(value = "{serviceName}", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<?> getServices(@PathVariable("serviceName") String serviceName, @RequestParam(value = "tags", defaultValue = "") String... tags){
+    @RequestMapping(value = "/services/{serviceName}", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> getService(@PathVariable("serviceName") String serviceName, @RequestParam(value = "tags", defaultValue = "") String... tags){
         HttpClient httpClient = HttpClientBuilder.create().build();
         HttpGet request = new HttpGet(haProxyAddress);
+        String tag = consulClient.createTotalTag(tags);
+        request.addHeader(tagNameHeader, tag);
         request.addHeader(serviceNameHeader, serviceName);
         Optional<CatalogService> service = Optional.empty();
         try {
             HttpResponse httpResponse = httpClient.execute(request);
-            //Can be 200,404, etc TODO:check if X-Forwarded-Host header still returned if backend unreachable
+            //A 5XX will not return the ip.
             if(httpResponse.getStatusLine().getStatusCode()>=500 && httpResponse.getStatusLine().getStatusCode()<600){
                 //backend cannot be reached
-                return new ResponseEntity<String>(new Gson().toJson(Collections.singletonMap("Error: ", "No service found")), HttpStatus.NOT_FOUND);
+                return new ResponseEntity<String>(new Gson().toJson(Collections.singletonMap("Error", "No healthy service found")), HttpStatus.NOT_FOUND);
             }
             String routedServerAddressAndPort = httpResponse.getFirstHeader(forwardedHostHeader).getValue();
             EntityUtils.consume(httpResponse.getEntity());
@@ -123,29 +113,41 @@ public class ServiceController {
         if(service.isPresent()){
             return new ResponseEntity(new Gson().toJson(service.get()), HttpStatus.OK);
         }else{
-            return new ResponseEntity(new Gson().toJson(Collections.singletonMap("Error: ", "No service found")), HttpStatus.NOT_FOUND);
+            return new ResponseEntity(new Gson().toJson(Collections.singletonMap("Error", "No service found")), HttpStatus.NOT_FOUND);
         }
     }
 
-    @RequestMapping(value = "{serviceName}/id/{serviceId}", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+    /**
+     * Get a service by its service id and service name.
+     * @param serviceName Service name
+     * @param serviceId Unique service id
+     * @return The service if it exists
+     */
+    @RequestMapping(value = "/services/{serviceName}/{serviceId}", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> getService(@PathVariable("serviceName") String serviceName, @PathVariable("serviceId") String serviceId){
         Optional<CatalogService> service = consulClient.queryForServiceByServiceId(serviceName, serviceId);
         if(!service.isPresent()){
-            return new ResponseEntity("Error: Service not found", HttpStatus.NOT_FOUND);
+            return new ResponseEntity(Collections.singletonMap("Error", "No service found"), HttpStatus.NOT_FOUND);
         }
         return new ResponseEntity(new Gson().toJson(service.get()), HttpStatus.OK);
     }
 
-    @RequestMapping(value = "{serviceName}", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
+    /**
+     * Register a new service of service name. The address and port of the service are mandatory fields/
+     * @param serviceName
+     * @param serviceDTO
+     * @return
+     */
+    @RequestMapping(value = "/services/{serviceName}", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> createService(@PathVariable("serviceName") String serviceName, @RequestBody ServiceDTO serviceDTO){
         serviceDTO.setServiceName(serviceName);
         if(serviceDTO.getAddress().isEmpty()){
             //mandatory, must explicitly state address even if local
-            return new ResponseEntity(new Gson().toJson(Collections.singletonMap("Error: ", "address field mandatory in body.")), HttpStatus.BAD_REQUEST);
+            return new ResponseEntity(new Gson().toJson(Collections.singletonMap("Error", "address field mandatory in body.")), HttpStatus.BAD_REQUEST);
         }
         if(serviceDTO.getPort()==0){
             //mandatory, must explicitly state port
-            return new ResponseEntity(new Gson().toJson(Collections.singletonMap("Error: ", "port field mandatory in body.")), HttpStatus.BAD_REQUEST);
+            return new ResponseEntity(new Gson().toJson(Collections.singletonMap("Error", "port field mandatory in body.")), HttpStatus.BAD_REQUEST);
         }
         if(serviceDTO.getServiceId().isEmpty()){
             serviceDTO.setServiceId(UUID.randomUUID().toString());
@@ -158,12 +160,23 @@ public class ServiceController {
         }
         Optional<CatalogService> service = consulClient.queryForServiceByServiceId(serviceDTO.getServiceName(), serviceDTO.getServiceId());
         if(!service.isPresent()){
-            return new ResponseEntity("Error: Failed to create service", HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity(new Gson().toJson(Collections.singletonMap("Error", "Failed to create service")), HttpStatus.INTERNAL_SERVER_ERROR);
         }
         CatalogService createdService = service.get();
-        String location = String.format("/%s/id/%s/",createdService.getServiceName(), createdService.getServiceId());
+        String location = String.format("/%s/%s",createdService.getServiceName(), createdService.getServiceId());
         MultiValueMap<String, String> headers = new LinkedMultiValueMap<>();
         headers.add(locationHeader, location);
         return new ResponseEntity(new Gson().toJson(createdService), headers, HttpStatus.CREATED);
+    }
+
+    @RequestMapping(value = "/services/{serviceName}/{serviceId}", method = RequestMethod.DELETE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> deleteService(@PathVariable("serviceName") String serviceName, @PathVariable("serviceId") String serviceId){
+        Optional<CatalogService> service = consulClient.queryForServiceByServiceId(serviceName, serviceId);
+        if(service.isPresent()){
+            consulClient.deregisterService(serviceId);
+            return new ResponseEntity(Collections.singletonMap("Message", "Removed service "+serviceId),HttpStatus.OK);
+        }else{
+            return new ResponseEntity(Collections.singletonMap("Error", "No service with serviceId "+serviceId),HttpStatus.NOT_FOUND);
+        }
     }
 }
