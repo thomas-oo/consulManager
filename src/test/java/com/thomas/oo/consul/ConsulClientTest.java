@@ -1,3 +1,5 @@
+package com.thomas.oo.consul;
+
 import com.orbitz.consul.Consul;
 import com.orbitz.consul.model.catalog.CatalogService;
 import com.thomas.oo.consul.DTO.CheckDTO;
@@ -164,7 +166,7 @@ public class ConsulClientTest {
     public void keyValueTest() throws Exception {
         String key = "testKey";
         String value = "testValue";
-        consulClient.putValue(key, value);
+        consulClient.putEntry(key, value);
         assertTrue(consulClient.getValue(key).equals(value));
         consulClient.deleteKey(key);
         assertTrue(consulClient.getValue(key).equals(""));

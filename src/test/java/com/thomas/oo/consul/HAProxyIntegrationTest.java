@@ -1,3 +1,5 @@
+package com.thomas.oo.consul;
+
 import com.thomas.oo.consul.consul.ConsulService;
 import com.thomas.oo.consul.consul.ConsulTemplateService;
 import com.thomas.oo.consul.loadBalancer.HAProxyService;

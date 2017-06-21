@@ -1,3 +1,5 @@
+package com.thomas.oo.consul;
+
 import com.thomas.oo.consul.loadBalancer.HAProxyService;
 import org.junit.After;
 import org.junit.Before;

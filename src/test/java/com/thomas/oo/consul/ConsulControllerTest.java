@@ -1,3 +1,5 @@
+package com.thomas.oo.consul;
+
 import com.thomas.oo.consul.consul.ConsulService;
 import org.junit.After;
 import org.junit.Before;

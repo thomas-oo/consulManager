@@ -297,7 +297,18 @@ public class ConsulClient {
         }
     }
 
-    public boolean putValue(String key, String value){
+    public boolean keyExists(String key){
+        KeyValueClient keyValueClient = consul.keyValueClient();
+        com.google.common.base.Optional<Value> value = keyValueClient.getValue(key);
+        if(!value.isPresent()){
+            return false;
+        }else{
+            return true;
+        }
+
+    }
+
+    public boolean putEntry(String key, String value){
         KeyValueClient keyValueClient = consul.keyValueClient();
         return keyValueClient.putValue(key, value);
     }
@@ -306,6 +317,21 @@ public class ConsulClient {
     public void deleteKey(String key){
         KeyValueClient keyValueClient = consul.keyValueClient();
         keyValueClient.deleteKey(key);
+    }
+
+    public void putEntries(Map<Object, Object> entries, String destPath) throws Exception {
+        String path = destPath;
+        if(!path.endsWith("/")){ //path should be a folder, thus end with /
+            path+="/";
+        }
+        for(Map.Entry<Object, Object> entry: entries.entrySet()){
+            String key = (String) entry.getKey();
+            String value = String.valueOf(entry.getValue());
+            boolean success = putEntry(path+key, value);
+            if(!success){
+                throw new Exception(String.format("Putting entry with key: %s and value: %s failed", key, value));
+            }
+        }
     }
 }
 

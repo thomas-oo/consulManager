@@ -5,6 +5,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
+import java.io.IOException;
+import java.lang.reflect.Field;
 
 @Service
 public class ConsulTemplateService extends AbstractService {
@@ -12,11 +14,16 @@ public class ConsulTemplateService extends AbstractService {
     String consulAddressAndPort;
     String confFilePath;
 
+    //Optional
+    String sourceTemplatePath;
+    String destinationPath;
+
     public ConsulTemplateService(@Value("${consulTemplate.execPath}")String executablePath, @Value("${consulTemplate.confPath}")String confFilePath, @Value("${consulTemplate.consulAddressAndPort}")String consulAddressAndPort) {
         this.executablePath = executablePath;
         this.consulAddressAndPort = consulAddressAndPort;
         this.confFilePath = confFilePath;
     }
+
 
     public void startProcess() throws Exception {
         File conf;
@@ -35,10 +42,35 @@ public class ConsulTemplateService extends AbstractService {
             e.printStackTrace();
         }
     }
+
+    public void reloadConfig() {
+        long pid = -1;
+        try{
+            if(this.p.getClass().equals("java.lang.UNIXProcess")){
+                Field f = this.p.getClass().getDeclaredField("pid");
+                f.setAccessible(true);
+                pid = f.getLong(this.p);
+                f.setAccessible(false);
+            }
+        }catch (Exception e){
+            pid = -1;
+            return;
+        }
+        try {
+            execInShell(String.format("kill -HUP %s",pid));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     @Override
     public void stopProcess() throws Exception {
         Runtime r = Runtime.getRuntime();
         r.exec("pkill consul-template");
         System.out.println("Stopped consul-template");
+    }
+
+    public String getConfFilePath() {
+        return confFilePath;
     }
 }

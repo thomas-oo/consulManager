@@ -36,7 +36,7 @@ public class KVController {
 
     @RequestMapping(value = "/kv/{key}", method = RequestMethod.PUT, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> putValue(@PathVariable("key") String key, @RequestBody String value){
-        boolean success = consulClient.putValue(key, value);
+        boolean success = consulClient.putEntry(key, value);
         if(success){
             String location = String.format("/kv/%s",key);
             MultiValueMap<String, String> headers = new LinkedMultiValueMap<>();

@@ -1,3 +1,5 @@
+package com.thomas.oo.consul;
+
 import com.thomas.oo.consul.util.DummyWebAppService;
 import org.junit.After;
 import org.junit.Before;
