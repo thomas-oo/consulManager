@@ -1,5 +1,6 @@
-package com.thomas.oo.consul;
+package com.thomas.oo.consul.IntegrationTests;
 
+import com.thomas.oo.consul.TestConfig;
 import com.thomas.oo.consul.consul.ConsulService;
 import com.thomas.oo.consul.consul.ConsulTemplateService;
 import com.thomas.oo.consul.loadBalancer.HAProxyService;
@@ -8,9 +9,19 @@ import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.HttpClientBuilder;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.TestContext;
+import org.springframework.test.context.TestExecutionListeners;
+import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import org.springframework.test.context.support.AbstractTestExecutionListener;
+import org.springframework.test.context.support.AnnotationConfigContextLoader;
+import org.springframework.test.context.support.DependencyInjectionTestExecutionListener;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -23,78 +34,47 @@ import static org.junit.Assert.assertTrue;
 /**
  * Testing whole stack from haproxy to consul and service. Testing by passing http requests to proxy
  */
-public class HAProxyIntegrationTest {
-    static ConsulService consulController;
-    static ConsulTemplateService consulTemplateController;
-    static HAProxyService haProxyController;
-    static DummyWebAppService[] dummyWebAppControllers = new DummyWebAppService[4];
+@RunWith(SpringJUnit4ClassRunner.class)
+@ContextConfiguration(classes = TestConfig.class, loader = AnnotationConfigContextLoader.class)
+@Order(value = Ordered.LOWEST_PRECEDENCE)
+@TestExecutionListeners(listeners = {LoadBalancingIntegrationTest.class, DependencyInjectionTestExecutionListener.class})
+public class LoadBalancingIntegrationTest extends AbstractTestExecutionListener{
+    @Autowired
+    ConsulService consulController;
+    @Autowired
+    ConsulTemplateService consulTemplateController;
+    @Autowired
+    HAProxyService haProxyController;
 
-    //Consul
-    static String consulPath = "/usr/local/bin/consul";
-    static String consulConfPath = "/root/Documents/consulProto/web.json";
+    DummyWebAppService[] dummyWebAppControllers = new DummyWebAppService[4];
+    int haproxyListeningPort = 8000;
+    @Value("${dummyWebApp.mvnPath}")
+    String mavenPath;
 
-    //Consul Template
-    static String consulTemplatePath = "/usr/local/bin/consul-template";
-    static String consulTemplateconfFilePath = "/root/Documents/consulProto/haproxy.json";
-    static String consulAddressAndPort = "localhost:8500";
+    @Value("${dummyWebApp.webAppPath}")
+    String webAppPath;
 
-    //HAProxy
-    static String haproxyPath = "/usr/local/bin/haproxy";
-    static String haproxyConfFilePath = "/root/Documents/consulProto/haproxy.conf";
-    static int haproxyListeningPort = 8000;
-
-    //DummyWebApp
-    static String mavenPath = "/root/bin/maven/3.0.5/bin/mvn";
-    static String webAppPath = "/git/consulPrototype/simpleapp/pom.xml";
-
-    @BeforeClass
-    public static void setUpClass() throws Exception {
-        //Start up consul, 4 dummy webapps, consulTemplate, and HAProxy
-        consulController = new ConsulService(consulPath, consulConfPath);
-        consulTemplateController = new ConsulTemplateService(consulTemplatePath, consulTemplateconfFilePath, consulAddressAndPort);
-        haProxyController = new HAProxyService(haproxyPath, haproxyConfFilePath);
+    @Override
+    public void beforeTestClass(TestContext testContext) throws Exception {
+        //TODO: remove this, properly config this test class
+        testContext.getApplicationContext().getAutowireCapableBeanFactory().autowireBean(this);
         dummyWebAppControllers[0] = new DummyWebAppService(mavenPath, webAppPath, 8080);
         dummyWebAppControllers[1] = new DummyWebAppService(mavenPath, webAppPath, 8081);
         dummyWebAppControllers[2] = new DummyWebAppService(mavenPath, webAppPath, 8082);
         dummyWebAppControllers[3] = new DummyWebAppService(mavenPath, webAppPath, 8083);
 
-        //Start
-        consulController.startProcess();
-        consulTemplateController.startProcess();
-        haProxyController.startProcess();
         for(DummyWebAppService dummyWebAppController : dummyWebAppControllers){
             dummyWebAppController.startProcess();
         }
-        waitUntilProcessesStart();
+        waitUntilWebAppsStart();
         //time for new conf file to be written and haproxy to be reloaded
-        Thread.sleep(5000);
+        Thread.sleep(500);
     }
 
-    @AfterClass
-    public static void tearDownClass() throws Exception {
-        //Stop
+    @Override
+    public void afterTestClass(TestContext testContext) throws Exception {
         for(DummyWebAppService dummyWebAppController : dummyWebAppControllers){
             dummyWebAppController.stopProcess();
-        }
-        haProxyController.stopProcess();
-        consulTemplateController.stopProcess();
-        consulController.stopProcess();
-    }
-
-    private static void waitUntilProcessesStart() throws Exception {
-        boolean processesStarted = false;
-        while(!processesStarted){
-           processesStarted = true;
-           int[] ports = {8500,8000,8080,8081,8082,8083};
-           for(int port : ports){
-               Runtime r = Runtime.getRuntime();
-               Process p = r.exec("lsof -i :"+port);
-               BufferedReader stdInput = new BufferedReader(new InputStreamReader(p.getInputStream()));
-               if(stdInput.lines().count()==0){
-                   processesStarted = false;
-               }
-           }
-           Thread.sleep(1000);
         }
     }
 
@@ -154,5 +134,21 @@ public class HAProxyIntegrationTest {
         }
     }
 
+    private static void waitUntilWebAppsStart() throws Exception {
+        boolean processesStarted = false;
+        while(!processesStarted){
+            processesStarted = true;
+            int[] ports = {8500,8000,8080,8081,8082,8083};
+            for(int port : ports){
+                Runtime r = Runtime.getRuntime();
+                Process p = r.exec("lsof -i :"+port);
+                BufferedReader stdInput = new BufferedReader(new InputStreamReader(p.getInputStream()));
+                if(stdInput.lines().count()==0){
+                    processesStarted = false;
+                }
+            }
+            Thread.sleep(100);
+        }
+    }
 
 }

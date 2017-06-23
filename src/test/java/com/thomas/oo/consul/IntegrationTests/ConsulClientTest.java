@@ -1,16 +1,18 @@
-package com.thomas.oo.consul;
+package com.thomas.oo.consul.IntegrationTests;
 
-import com.orbitz.consul.Consul;
 import com.orbitz.consul.model.catalog.CatalogService;
 import com.thomas.oo.consul.DTO.CheckDTO;
 import com.thomas.oo.consul.DTO.ServiceDTO;
+import com.thomas.oo.consul.TestConfig;
 import com.thomas.oo.consul.consul.ConsulClient;
 import com.thomas.oo.consul.consul.ConsulService;
 import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import org.springframework.test.context.support.AnnotationConfigContextLoader;
 
 import java.util.Arrays;
 import java.util.List;
@@ -19,13 +21,15 @@ import java.util.UUID;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-public class ConsulClientTest {
+@RunWith(SpringJUnit4ClassRunner.class)
+@ContextConfiguration(classes = TestConfig.class, loader = AnnotationConfigContextLoader.class)
+public class ConsulClientTest{
 
+    @Autowired
     ConsulClient consulClient;
-    static ConsulService consulService;
-    //Consul
-    static String consulPath = "/usr/local/bin/consul";
-    static String consulConfPath = "/root/Documents/consulProto/web.json";
+
+    @Autowired
+    ConsulService consulService;
 
     String testServiceName = "testService";
     String testServiceId = "test";
@@ -35,22 +39,6 @@ public class ConsulClientTest {
     ServiceDTO localServiceTags = new ServiceDTO(testPort, testServiceName, testServiceId, "tag1","tag2","tag3","tag4","tag5");
     ServiceDTO remoteServiceNoTags = new ServiceDTO("localhost", testPort, testServiceName, testServiceId);
     ServiceDTO remoteServiceTags = new ServiceDTO("localhost", testPort, testServiceName, testServiceId, "tag1","tag2","tag3","tag4","tag5");
-
-    @BeforeClass
-    public static void setUpClass() throws Exception {
-        consulService = new ConsulService(consulPath,consulConfPath);
-        consulService.startProcess();
-    }
-
-    @AfterClass
-    public static void tearDownClass() throws Exception {
-        consulService.stopProcess();
-    }
-
-    @Before
-    public void setUp() throws Exception {
-        consulClient = new ConsulClient(Consul.builder().build());
-    }
 
     @After
     public void tearDown() throws Exception {

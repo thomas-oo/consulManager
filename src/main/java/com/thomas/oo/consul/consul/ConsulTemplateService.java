@@ -46,7 +46,7 @@ public class ConsulTemplateService extends AbstractService {
     public void reloadConfig() {
         long pid = -1;
         try{
-            if(this.p.getClass().equals("java.lang.UNIXProcess")){
+            if(this.p.getClass().getName().equals("java.lang.UNIXProcess")){
                 Field f = this.p.getClass().getDeclaredField("pid");
                 f.setAccessible(true);
                 pid = f.getLong(this.p);
@@ -66,7 +66,7 @@ public class ConsulTemplateService extends AbstractService {
     @Override
     public void stopProcess() throws Exception {
         Runtime r = Runtime.getRuntime();
-        r.exec("pkill consul-template");
+        r.exec("killall -9 consul-template");
         System.out.println("Stopped consul-template");
     }
 

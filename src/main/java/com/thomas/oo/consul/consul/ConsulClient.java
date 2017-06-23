@@ -297,6 +297,7 @@ public class ConsulClient {
         }
     }
 
+    //FIXME: returns false if the key is a folder that does exist and holds other keys. Misleading.
     public boolean keyExists(String key){
         KeyValueClient keyValueClient = consul.keyValueClient();
         com.google.common.base.Optional<Value> value = keyValueClient.getValue(key);
@@ -305,12 +306,25 @@ public class ConsulClient {
         }else{
             return true;
         }
+    }
 
+    //FIXME: DOES NOT CHECK FOLDERS, ONLY KEYS
+    public boolean allKeysExist(Set<String> keys){
+        KeyValueClient keyValueClient = consul.keyValueClient();
+        List<String> allKeys = keyValueClient.getKeys("");
+        return allKeys.containsAll(keys);
     }
 
     public boolean putEntry(String key, String value){
         KeyValueClient keyValueClient = consul.keyValueClient();
         return keyValueClient.putValue(key, value);
+    }
+
+    public boolean putEntryInFolder(String folder, String key, String value){
+        if(!folder.endsWith("/")){
+            folder+="/";
+        }
+        return putEntry(folder+key, value);
     }
 
     //Deletes the exact matching key. Not recursive
@@ -319,8 +333,8 @@ public class ConsulClient {
         keyValueClient.deleteKey(key);
     }
 
-    public void putEntries(Map<Object, Object> entries, String destPath) throws Exception {
-        String path = destPath;
+    public boolean putEntries(Map<Object, Object> entries, String destFolder) {
+        String path = destFolder;
         if(!path.endsWith("/")){ //path should be a folder, thus end with /
             path+="/";
         }
@@ -329,9 +343,10 @@ public class ConsulClient {
             String value = String.valueOf(entry.getValue());
             boolean success = putEntry(path+key, value);
             if(!success){
-                throw new Exception(String.format("Putting entry with key: %s and value: %s failed", key, value));
+                return false;
             }
         }
+        return true;
     }
 }
 
