@@ -58,7 +58,7 @@ public class ConsulKVPropertyControllerTest {
         }
         consulKVPropertyController.uploadPropertyFiles(propertyFilesMap);
         Thread.sleep(1000);
-        assertTrue(consulKVPropertyController.checkIfAllKeysExists(propertyFilesMap.keySet()));
+        assertTrue(consulKVPropertyController.checkIfAllFoldersExists(propertyFilesMap.keySet()));
     }
 
     @Test

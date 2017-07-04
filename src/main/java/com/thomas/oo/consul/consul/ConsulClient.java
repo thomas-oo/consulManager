@@ -297,22 +297,51 @@ public class ConsulClient {
         }
     }
 
-    //FIXME: returns false if the key is a folder that does exist and holds other keys. Misleading.
+    //TODO:test
     public boolean keyExists(String key){
         KeyValueClient keyValueClient = consul.keyValueClient();
-        com.google.common.base.Optional<Value> value = keyValueClient.getValue(key);
-        if(!value.isPresent()){
-            return false;
-        }else{
-            return true;
-        }
+        List<String> allKeys = keyValueClient.getKeys("");
+        boolean keyExists = allKeys.contains(key);
+        return keyExists;
     }
 
-    //FIXME: DOES NOT CHECK FOLDERS, ONLY KEYS
+    //TODO:test
+    public boolean folderExists(String folder){
+        if(!folder.endsWith("/")){
+            folder += "/";
+        }
+        KeyValueClient keyValueClient = consul.keyValueClient();
+        List<String> allKeys = keyValueClient.getKeys("");
+        boolean folderExists = allKeys.contains(folder);
+        return folderExists;
+    }
+
+    /**
+     * Checks if keys exist in consul
+     * @param keys Set of names of keys. Must be the full path of the key
+     * @return True if all keys exist in consul
+     */
     public boolean allKeysExist(Set<String> keys){
         KeyValueClient keyValueClient = consul.keyValueClient();
         List<String> allKeys = keyValueClient.getKeys("");
         return allKeys.containsAll(keys);
+    }
+
+    /**
+     * Checks if folders exist in consul
+     * @param folders Set of names of folders to check for
+     * @return True if all folders exist in consul
+     */
+    public boolean allFoldersExist(Set<String> folders){
+        KeyValueClient keyValueClient = consul.keyValueClient();
+        List<String> allKeys = keyValueClient.getKeys("");
+        for(String folder : folders){
+            boolean folderExists = allKeys.stream().anyMatch(f -> f.startsWith(folder));
+            if(!folderExists){
+                return false;
+            }
+        }
+        return true;
     }
 
     public boolean putEntry(String key, String value){
@@ -327,6 +356,15 @@ public class ConsulClient {
         return putEntry(folder+key, value);
     }
 
+    //Creates a folder
+    public boolean putFolder(String folder){
+        if(!folder.endsWith("/")){
+            folder += "/";
+        }
+        KeyValueClient keyValueClient = consul.keyValueClient();
+        return keyValueClient.putValue(folder);
+    }
+
     //Deletes the exact matching key. Not recursive
     public void deleteKey(String key){
         KeyValueClient keyValueClient = consul.keyValueClient();
@@ -337,6 +375,10 @@ public class ConsulClient {
         String path = destFolder;
         if(!path.endsWith("/")){ //path should be a folder, thus end with /
             path+="/";
+        }
+        boolean createdFolder = putFolder(destFolder);
+        if(!createdFolder){
+            return false;
         }
         for(Map.Entry<Object, Object> entry: entries.entrySet()){
             String key = (String) entry.getKey();

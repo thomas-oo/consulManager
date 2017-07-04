@@ -60,7 +60,6 @@ public class PropertiesUtilTest {
     }
 
     //TODO:More of an integration test than a unit test..
-
     @Test
     public void consulKVSyncTest() throws Exception {
         Map<Object,Object> configMap = propertiesUtil.parsePropertiesFile("config.properties");

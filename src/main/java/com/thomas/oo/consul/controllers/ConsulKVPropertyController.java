@@ -88,4 +88,8 @@ public class ConsulKVPropertyController {
     public boolean checkIfAllKeysExists(Set<String> keys) {
         return consulClient.allKeysExist(keys);
     }
+
+    public boolean checkIfAllFoldersExists(Set<String> folders) {
+        return consulClient.allFoldersExist(folders);
+    }
 }
