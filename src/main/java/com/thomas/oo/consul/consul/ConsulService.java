@@ -11,10 +11,12 @@ import java.io.File;
 public class ConsulService extends AbstractService {
     String executablePath;
     String confFilePath;
+    String logLevel;
 
-    public ConsulService(@Value("${consul.execPath}") String consulPath, @Value("${consul.confPath}")String confFilePath) {
+    public ConsulService(@Value("${consul.execPath}") String consulPath, @Value("${consul.confPath}")String confFilePath, @Value("${consul.logLevel}")String logLevel) {
         this.executablePath = consulPath;
         this.confFilePath = confFilePath;
+        this.logLevel = logLevel;
     }
 
     public void startProcess() throws Exception {
@@ -26,9 +28,8 @@ public class ConsulService extends AbstractService {
         }
 
         // Start consul
-        //TODO: put log level into config
         try {
-            String command = executablePath + " agent -dev -config-dir=" + confFilePath + " -log-level=err";
+            String command = String.format("%s agent -dev -config-dir=%s -log-level=%s", executablePath, confFilePath, logLevel);
             this.p = execInShell(command);
             System.out.println("Started consul");
         } catch (Exception e) {

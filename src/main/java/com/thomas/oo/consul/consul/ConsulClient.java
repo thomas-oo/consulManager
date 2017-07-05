@@ -297,7 +297,6 @@ public class ConsulClient {
         }
     }
 
-    //TODO:test
     public boolean keyExists(String key){
         KeyValueClient keyValueClient = consul.keyValueClient();
         List<String> allKeys = keyValueClient.getKeys("");
@@ -305,7 +304,6 @@ public class ConsulClient {
         return keyExists;
     }
 
-    //TODO:test
     public boolean folderExists(String folder){
         if(!folder.endsWith("/")){
             folder += "/";

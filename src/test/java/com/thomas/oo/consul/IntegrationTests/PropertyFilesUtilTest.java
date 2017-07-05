@@ -59,7 +59,7 @@ public class PropertyFilesUtilTest {
         assertTrue(outputProperties.exists());
     }
 
-    //TODO:More of an integration test than a unit test..
+    //Integration test
     @Test
     public void consulKVSyncTest() throws Exception {
         Map<Object,Object> configMap = propertyFilesUtil.parsePropertiesFile("config.properties");

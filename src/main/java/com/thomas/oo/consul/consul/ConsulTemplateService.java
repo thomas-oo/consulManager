@@ -57,8 +57,7 @@ public class ConsulTemplateService extends AbstractService {
             return;
         }
         try {
-            ProcessBuilder processBuilder = new ProcessBuilder().command("bash", "-c", String.format("kill -HUP %s",pid)).inheritIO();
-            processBuilder.start();
+            execInShell(String.format("kill -HUP %s",pid));
         } catch (IOException e) {
             e.printStackTrace();
         }

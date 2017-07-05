@@ -56,7 +56,6 @@ public class LoadBalancingIntegrationTest extends AbstractTestExecutionListener{
 
     @Override
     public void beforeTestClass(TestContext testContext) throws Exception {
-        //TODO: remove this, properly config this test class
         testContext.getApplicationContext().getAutowireCapableBeanFactory().autowireBean(this);
         dummyWebAppControllers[0] = new DummyWebAppService(mavenPath, webAppPath, 8080);
         dummyWebAppControllers[1] = new DummyWebAppService(mavenPath, webAppPath, 8081);

@@ -132,7 +132,7 @@ public class ConsulKVPropertyControllerTest {
         //Now change a key
         String newValue = "newValue";
         consulClient.putEntry(TEST_DEFAULT_PROPERTIES+"consul.execPath", newValue);
-        Thread.sleep(500);
+        Thread.sleep(1000);
 
         //Read properties
         PropertiesConfiguration propertiesConfiguration = getPropertiesConfiguration(testOutputProperties);
@@ -142,7 +142,7 @@ public class ConsulKVPropertyControllerTest {
 
         //Now change the key again
         consulClient.putEntry(TEST_DEFAULT_PROPERTIES+"consul.execPath", newValue+"1");
-        Thread.sleep(500);
+        Thread.sleep(1000);
         //should automatically change property file
         long lastMod = testOutputProperties.lastModified();
         assertNotEquals(firstMod, lastMod);

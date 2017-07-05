@@ -23,7 +23,7 @@ public class DummyWebAppService extends AbstractService {
         // Start web app
         try {
             String command = mavenPath + " -f " + webAppPath + " spring-boot:run -Dserver.port=" + port;
-            p = execInShell(command);
+            this.p = execInShell(command);
             System.out.println("Started web app on port: "+port);
         } catch (Exception e) {
             e.printStackTrace();
@@ -32,7 +32,7 @@ public class DummyWebAppService extends AbstractService {
 
     @Override
     public void stopProcess() throws Exception {
-        p.destroyForcibly();
+        this.p.destroyForcibly();
         System.out.println("Stopped web app on port: "+port);
     }
 }

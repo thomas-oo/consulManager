@@ -79,7 +79,9 @@ public class ConsulKVPropertyController {
         return true;
     }
 
-    //Todo: perhaps stop the property files from being written by consul-template before hand
+    /**
+     * Deletes created property files. However, consul-template will keep writing property files unless you tell it to stop
+     */
     public void deleteCreatedPropertyFiles() {
         for(Path createdPropertyFile : createdPropertyFiles){
             createdPropertyFile.toFile().delete();
@@ -87,6 +89,9 @@ public class ConsulKVPropertyController {
         createdPropertyFiles.removeAll(createdPropertyFiles);
     }
 
+    /**
+     * Stops consul-template from writing property files. Does not delete them but stops them from updating
+     */
     public void stopWritingPropertyFiles(){
         try {
             propertyFilesUtil.cleanUpConfFile();
