@@ -26,8 +26,9 @@ public class ConsulService extends AbstractService {
         }
 
         // Start consul
+        //TODO: put log level into config
         try {
-            String command = executablePath + " agent -dev -config-dir=" + confFilePath;
+            String command = executablePath + " agent -dev -config-dir=" + confFilePath + " -log-level=err";
             this.p = execInShell(command);
             System.out.println("Started consul");
         } catch (Exception e) {

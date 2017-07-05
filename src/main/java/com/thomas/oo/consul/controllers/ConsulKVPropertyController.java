@@ -1,7 +1,7 @@
 package com.thomas.oo.consul.controllers;
 
 import com.thomas.oo.consul.consul.ConsulClient;
-import com.thomas.oo.consul.util.PropertiesUtil;
+import com.thomas.oo.consul.util.PropertyFilesUtil;
 import org.apache.commons.configuration.ConfigurationException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -17,13 +17,13 @@ public class ConsulKVPropertyController {
     @Autowired
     ConsulClient consulClient;
     @Autowired
-    PropertiesUtil propertiesUtil;
+    PropertyFilesUtil propertyFilesUtil;
 
     Set<Path> createdPropertyFiles = new HashSet<>();
 
-    public ConsulKVPropertyController(ConsulClient consulClient, PropertiesUtil propertiesUtil) {
+    public ConsulKVPropertyController(ConsulClient consulClient, PropertyFilesUtil propertyFilesUtil) {
         this.consulClient = consulClient;
-        this.propertiesUtil = propertiesUtil;
+        this.propertyFilesUtil = propertyFilesUtil;
     }
 
     /**
@@ -37,7 +37,7 @@ public class ConsulKVPropertyController {
             return false;
         }
         for(Map.Entry<String, Path> entry : kvFolderToPath.entrySet()){
-            Map<Object, Object> propertiesMap = propertiesUtil.parsePropertiesFile(entry.getValue().toString());
+            Map<Object, Object> propertiesMap = propertyFilesUtil.parsePropertiesFile(entry.getValue().toString());
             boolean success = consulClient.putEntries(propertiesMap, entry.getKey());
             if(!success){
                 return false;
@@ -59,7 +59,7 @@ public class ConsulKVPropertyController {
     }
 
     /**
-     *
+     * Writes a .properties to the desired paths using KV values from a desired KV folder
      * @param kvFolderToPath Key - KV folder name to read from. Value - Properties path to write to
      * @return success
      */
@@ -69,7 +69,7 @@ public class ConsulKVPropertyController {
         }
         for(Map.Entry<String, Path> entry : kvFolderToPath.entrySet()){
             try {
-                propertiesUtil.createPropertiesFile(entry.getValue().toString(), entry.getKey());
+                propertyFilesUtil.createPropertiesFile(entry.getValue().toString(), entry.getKey());
                 createdPropertyFiles.add(entry.getValue());
             } catch (IOException e) {
                 e.printStackTrace();
@@ -79,9 +79,19 @@ public class ConsulKVPropertyController {
         return true;
     }
 
+    //Todo: perhaps stop the property files from being written by consul-template before hand
     public void deleteCreatedPropertyFiles() {
         for(Path createdPropertyFile : createdPropertyFiles){
             createdPropertyFile.toFile().delete();
+        }
+        createdPropertyFiles.removeAll(createdPropertyFiles);
+    }
+
+    public void stopWritingPropertyFiles(){
+        try {
+            propertyFilesUtil.cleanUpConfFile();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 

@@ -4,7 +4,7 @@ import com.thomas.oo.consul.TestConfig;
 import com.thomas.oo.consul.consul.ConsulClient;
 import com.thomas.oo.consul.consul.ConsulService;
 import com.thomas.oo.consul.consul.ConsulTemplateService;
-import com.thomas.oo.consul.util.PropertiesUtil;
+import com.thomas.oo.consul.util.PropertyFilesUtil;
 import org.junit.After;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -20,7 +20,7 @@ import static org.junit.Assert.assertTrue;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(classes = TestConfig.class, loader = AnnotationConfigContextLoader.class)
-public class PropertiesUtilTest {
+public class PropertyFilesUtilTest {
     @Autowired
     ConsulClient consulClient;
     @Autowired
@@ -28,52 +28,52 @@ public class PropertiesUtilTest {
     @Autowired
     ConsulTemplateService consulTemplateService;
     @Autowired
-    PropertiesUtil propertiesUtil;
+    PropertyFilesUtil propertyFilesUtil;
 
     @After
     public void tearDown() throws Exception {
-        propertiesUtil.cleanUpConfFile();
-        propertiesUtil.deleteCreatedPropertyFiles();
+        propertyFilesUtil.cleanUpConfFile();
+        propertyFilesUtil.deleteCreatedPropertyFiles();
     }
 
     @Test
     public void parsePropertiesTest() throws Exception {
-        Map<Object,Object> configMap = propertiesUtil.parsePropertiesFile("config.properties");
+        Map<Object,Object> configMap = propertyFilesUtil.parsePropertiesFile("config.properties");
         assertTrue(configMap.containsKey("consul.execPath"));
     }
 
     @Test
     public void parsePropertiesWithIncludeTest() throws Exception {
-        Map<Object,Object> configMap = propertiesUtil.parsePropertiesFile("rest_api.properties");
+        Map<Object,Object> configMap = propertyFilesUtil.parsePropertiesFile("rest_api.properties");
         assertTrue(configMap.containsKey("include"));
     }
 
     @Test
     public void createPropertiesTest() throws Exception {
-        Map<Object,Object> configMap = propertiesUtil.parsePropertiesFile("config.properties");
+        Map<Object,Object> configMap = propertyFilesUtil.parsePropertiesFile("config.properties");
         consulClient.putEntries(configMap, "testProperties");
-        propertiesUtil.createPropertiesFile("/git/consulPrototype/consulLoadBalancing/output/testProperties.properties", "testProperties");
+        propertyFilesUtil.createPropertiesFile("/git/consulPrototype/consulLoadBalancing/output/testProperties.properties", "testProperties");
         File outputProperties = new File("output/testProperties.properties");
         // wait a little bit for consul-template to write
-        Thread.sleep(100);
+        Thread.sleep(1000);
         assertTrue(outputProperties.exists());
     }
 
     //TODO:More of an integration test than a unit test..
     @Test
     public void consulKVSyncTest() throws Exception {
-        Map<Object,Object> configMap = propertiesUtil.parsePropertiesFile("config.properties");
+        Map<Object,Object> configMap = propertyFilesUtil.parsePropertiesFile("config.properties");
         consulClient.putEntries(configMap, "testProperties");
-        propertiesUtil.createPropertiesFile("/git/consulPrototype/consulLoadBalancing/output/testProperties.properties", "testProperties");
+        propertyFilesUtil.createPropertiesFile("/git/consulPrototype/consulLoadBalancing/output/testProperties.properties", "testProperties");
         File outputProperties = new File("output/testProperties.properties");
-        Thread.sleep(100);
+        Thread.sleep(1000);
         assertTrue(outputProperties.exists());
 
         //put in a new KV entry
         //assert that it shows up in the properties file
         consulClient.putEntryInFolder("testProperties", "newKey", "newValue");
         Thread.sleep(100);
-        Map<Object, Object> newConfigMap = propertiesUtil.parsePropertiesFile("output/testProperties.properties");
+        Map<Object, Object> newConfigMap = propertyFilesUtil.parsePropertiesFile("output/testProperties.properties");
         assertTrue(newConfigMap.containsKey("newKey") && newConfigMap.get("newKey").equals("newValue"));
     }
 }

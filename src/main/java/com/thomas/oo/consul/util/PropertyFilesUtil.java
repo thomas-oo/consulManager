@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
 
 //Todo: refactor
 @Service
-public class PropertiesUtil {
+public class PropertyFilesUtil {
 
     ConsulTemplateService consulTemplateService;
     final String config = "template = { source = \"%s\" destination = \"%s\"} \n";
@@ -32,7 +32,7 @@ public class PropertiesUtil {
     Set<String> createdPropertyFiles = new HashSet<>();
 
     @Autowired
-    public PropertiesUtil(ConsulTemplateService consulTemplateService) {
+    public PropertyFilesUtil(ConsulTemplateService consulTemplateService) {
         this.consulTemplateService = consulTemplateService;
         targetConfFile = consulTemplateService.getConfFilePath();
     }
@@ -91,7 +91,7 @@ public class PropertiesUtil {
     }
 
     /**
-     * Cleans up the original conf file used by consul template service. Deletes the add additional template lines.
+     * Cleans up the original conf file used by consul template service. Deletes the added additional template lines.
      * Should be called in a shutdown hook or test cleanup method
      * @throws IOException
      */
@@ -101,6 +101,8 @@ public class PropertiesUtil {
         List<String> lines = Files.readAllLines(confFilePath);
         List<String> updatedLines = lines.stream().filter(s -> !addedLines.contains(s)).collect(Collectors.toList());
         Files.write(confFilePath, updatedLines);
+        addedLines.removeAll(addedLines);
+        consulTemplateService.reloadConfig();
     }
 
     /**
@@ -111,5 +113,6 @@ public class PropertiesUtil {
             Path createdPropertyFilePath = Paths.get(createdPropertyFile);
             createdPropertyFilePath.toFile().delete();
         }
+        createdPropertyFiles.removeAll(createdPropertyFiles);
     }
 }
