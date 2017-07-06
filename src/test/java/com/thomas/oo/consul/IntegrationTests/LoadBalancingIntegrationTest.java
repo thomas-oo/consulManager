@@ -9,6 +9,7 @@ import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.HttpClientBuilder;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +19,7 @@ import org.springframework.core.annotation.Order;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.TestContext;
 import org.springframework.test.context.TestExecutionListeners;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.test.context.support.AbstractTestExecutionListener;
 import org.springframework.test.context.support.AnnotationConfigContextLoader;
@@ -34,10 +36,12 @@ import static org.junit.Assert.assertTrue;
 /**
  * Testing whole stack from haproxy to consul and service. Testing by passing http requests to proxy
  */
+@Ignore
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(classes = TestConfig.class, loader = AnnotationConfigContextLoader.class)
 @Order(value = Ordered.LOWEST_PRECEDENCE)
 @TestExecutionListeners(listeners = {LoadBalancingIntegrationTest.class, DependencyInjectionTestExecutionListener.class})
+@TestPropertySource("classpath:testConfig.properties")
 public class LoadBalancingIntegrationTest extends AbstractTestExecutionListener{
     @Autowired
     ConsulService consulController;

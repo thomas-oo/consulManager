@@ -19,7 +19,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-
 @Service
 public class PropertyFilesUtil {
 
@@ -44,8 +43,8 @@ public class PropertyFilesUtil {
      * @throws ConfigurationException
      */
     public Map<Object, Object> parsePropertiesFile(String propertiesFile) throws ConfigurationException {
+        PropertiesConfiguration.setInclude("IDONOTWANTINCLUDETOWORK");
         PropertiesConfiguration configuration = new PropertiesConfiguration(propertiesFile);
-        configuration.setIncludesAllowed(false);
         Map<Object, Object> configMap = new ConfigurationMap(configuration);
         return configMap;
     }

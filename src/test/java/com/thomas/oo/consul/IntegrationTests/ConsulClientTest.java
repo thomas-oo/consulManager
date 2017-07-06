@@ -7,22 +7,27 @@ import com.thomas.oo.consul.TestConfig;
 import com.thomas.oo.consul.consul.ConsulClient;
 import com.thomas.oo.consul.consul.ConsulService;
 import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.test.context.support.AnnotationConfigContextLoader;
 
+import java.net.InetAddress;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(classes = TestConfig.class, loader = AnnotationConfigContextLoader.class)
+@TestPropertySource("classpath:testConfig.properties")
 public class ConsulClientTest{
 
     @Autowired
@@ -30,6 +35,8 @@ public class ConsulClientTest{
 
     @Autowired
     ConsulService consulService;
+
+    String consulAddress;
 
     String testServiceName = "testService";
     String testServiceId = "test";
@@ -39,6 +46,18 @@ public class ConsulClientTest{
     ServiceDTO localServiceTags = new ServiceDTO(testPort, testServiceName, testServiceId, "tag1","tag2","tag3","tag4","tag5");
     ServiceDTO remoteServiceNoTags = new ServiceDTO("localhost", testPort, testServiceName, testServiceId);
     ServiceDTO remoteServiceTags = new ServiceDTO("localhost", testPort, testServiceName, testServiceId, "tag1","tag2","tag3","tag4","tag5");
+
+    @Before
+    public void setUp() throws Exception {
+        String consulHostName = consulClient.getConsulAddressAndPort().split(":")[0];
+        InetAddress address;
+        if(consulHostName.equalsIgnoreCase("localhost")){
+            address = InetAddress.getLocalHost();
+        }else{
+            address = InetAddress.getByName(consulHostName);
+        }
+        consulAddress = address.getHostAddress();
+    }
 
     @After
     public void tearDown() throws Exception {
@@ -108,12 +127,12 @@ public class ConsulClientTest{
     @Test
     public void queryForServiceWithNoTagsTest() throws Exception {
         consulClient.registerLocalService(localServiceNoTags);
-        assertTrue(consulClient.queryForService(testServiceName, "active").size() == 0);
+        assertEquals(0,consulClient.queryForService(testServiceName, "active").size());
         List<CatalogService> catalogServices = consulClient.queryForService(testServiceName);
-        assertTrue(catalogServices.size() == 1);
-        assertTrue(catalogServices.get(0).getAddress().equalsIgnoreCase("127.0.0.1"));
+        assertEquals(1, catalogServices.size());
+        assertEquals(consulAddress,catalogServices.get(0).getAddress());
         catalogServices = consulClient.queryForService(testServiceName);
-        assertTrue(catalogServices.get(0).getServicePort()==testPort);
+        assertEquals(testPort, catalogServices.get(0).getServicePort());
     }
 
     @Test

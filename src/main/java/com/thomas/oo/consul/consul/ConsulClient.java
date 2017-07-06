@@ -44,10 +44,12 @@ import java.util.stream.Collectors;
 public class ConsulClient {
     private static final String CRITICAL = "critical";
     private final Consul consul;
+    @org.springframework.beans.factory.annotation.Value("${consul.consulAddressAndPort}") private String consulAddressAndPort;
 
     @Autowired
-    public ConsulClient(Consul consul){
+    public ConsulClient(Consul consul,@org.springframework.beans.factory.annotation.Value("${consul.consulAddressAndPort}")String consulAddressAndPort){
         this.consul = consul;
+        this.consulAddressAndPort = consulAddressAndPort;
     }
 
     /**
@@ -387,6 +389,10 @@ public class ConsulClient {
             }
         }
         return true;
+    }
+
+    public String getConsulAddressAndPort() {
+        return consulAddressAndPort;
     }
 }
 
