@@ -7,6 +7,7 @@ import com.orbitz.consul.Consul;
 import com.orbitz.consul.HealthClient;
 import com.orbitz.consul.KeyValueClient;
 import com.orbitz.consul.NotRegisteredException;
+import com.orbitz.consul.StatusClient;
 import com.orbitz.consul.model.agent.Check;
 import com.orbitz.consul.model.agent.ImmutableCheck;
 import com.orbitz.consul.model.agent.ImmutableRegistration;
@@ -393,6 +394,12 @@ public class ConsulClient {
 
     public String getConsulAddressAndPort() {
         return consulAddressAndPort;
+    }
+
+    //Todo:test
+    public String getClusterLeader(){
+        StatusClient statusClient = consul.statusClient();
+        return statusClient.getLeader();
     }
 }
 

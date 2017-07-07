@@ -20,11 +20,11 @@ public class TestConfig {
 
     @Bean
     public Consul consul(ConsulService consulService){
-//        try {
-//            consulService.startProcess();
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//        }
+        try {
+            consulService.startProcess();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         //Connects consul object to a consul agent that is running at consulAddressAndHost
         Consul consul = Consul.builder().withHostAndPort(HostAndPort.fromString(consulAddressAndHost)).build();
         return consul;
